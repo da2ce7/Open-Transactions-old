@@ -282,18 +282,26 @@ OTCrypto::~OTCrypto()
 // -----------------------------
 
 //static
-OTCrypto * OTCrypto::It()
+const std::unique_ptr<OTCrypto> & OTCrypto::It()
 {
+
+static std::unique_ptr<OTCrypto> theCrypto(nullptr);
+
+if (nullptr != theCrypto) return theCrypto;
+
     // Todo: someday, swapping the crypto lib should be as easy as changing this
     // compile flag to OT_CRYPTO_USING_GPG. We'll get there.
     //
-static
+
+
 #ifdef OT_CRYPTO_USING_OPENSSL
-    OTCrypto_OpenSSL
+theCrypto = std::unique_ptr<OTCrypto>(new OTCrypto_OpenSSL());
 #endif
-    s_theSingleton;    // For now we're only allowing a single instance.
-    
-    return &s_theSingleton;
+
+
+
+OT_ASSERT(nullptr != theCrypto);  return theCrypto; 
+
 }
 
 // -----------------------------

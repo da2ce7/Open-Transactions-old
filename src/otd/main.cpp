@@ -288,7 +288,7 @@ ot -t 100 --from qwer --to j43k  (TRANSFER 100 from ACCT STARTING WITH qwer TO A
 bool SetupPointersForWalletMyNymAndServerContract(std::string & str_ServerID,
 	std::string & str_MyNym,
 	OTPseudonym *& pMyNym, 
-	OTWallet *& pWallet, 
+	std::shared_ptr<OTWallet> pWallet, 
 	OTServerContract *& pServerContract)
 {
     // If we got down here, that means there were no commands on the command line 
@@ -1796,30 +1796,9 @@ void CollectDefaultedCLValues(AnyOption *opt,
 
 int main(int argc, char* argv[])
 {    
-	// --------------------------------------------
-	class __OTclient_RAII
-	{
-	public:
-		__OTclient_RAII()
-		{
-			// OT_API class exists only on the client side.
-
-			OT_API::InitOTAPI();     // SSL gets initialized in here, before any keys are loaded.       
-		}
-		~__OTclient_RAII()
-		{
-			OT_API::CleanupOTAPI();
-		}
-	};
-	// --------------------------------------------
-	//
-	// This makes SURE that CleanupOTAPI() gets called before main() exits (without any
-	// twisted logic being necessary below, for that to happen.)
-	//
-	__OTclient_RAII   the_client_cleanup;
-
 	// -------------------------------------------------------------------
-
+	//
+	// All automatic now.
 
 	OTAPI_Wrap::OTAPI()->Init();
 
@@ -1961,7 +1940,7 @@ int main(int argc, char* argv[])
 
 		//		std::string strScript ="print(\"Hello, world\")";
 
-		OTScript_AutoPtr pScript = OTScriptFactory(results);
+		std::shared_ptr<OTScript> pScript = OTScriptFactory(results);
 
 		if (NULL != pScript.get())
 		{
@@ -1980,7 +1959,7 @@ int main(int argc, char* argv[])
 	}
 	else // Else a command WAS provided at the command line, so we execute a single time, once just for that command.
 	{
-		OTWallet * pWallet = NULL;
+		std::shared_ptr<OTWallet> pWallet = std::shared_ptr<OTWallet>();
 		OTServerContract * pServerContract = NULL;
 		OTPseudonym * pMyNym = NULL;
 
@@ -2262,8 +2241,9 @@ int main(int argc, char* argv[])
         // are in place (since in ZMQ mode, each message could be from a different nym 
         // and to a different server.)
         //
-		if ((NULL != pServerContract) && (NULL != pMyNym))
-			OTAPI_Wrap::OTAPI()->GetClient()->SetFocusToServerAndNym(*pServerContract, *pMyNym, &OT_API::TransportCallback);
+		if ((nullptr != pServerContract) && (nullptr != pMyNym))
+			OTAPI_Wrap::OTAPI()->m_pClient -> SetFocusToServerAndNym(*pServerContract, *pMyNym);
+
 		// NOTE -- This MAY be unnecessary for ProcessUserCommand (since these args are passed
 		// in there already) but it's definitely necessary soon after for ProcessServerReply()
 		// (which comes next.)
@@ -2323,7 +2303,7 @@ int main(int argc, char* argv[])
 
 			// ----------------------------------------
 
-			OTScript_AutoPtr pScript = OTScriptFactory(results);
+			std::shared_ptr<OTScript> pScript = OTScriptFactory(results);
 
 			OTVariable the_return_value("ret_val", nReturnValue);
 
@@ -2884,7 +2864,7 @@ int main(int argc, char* argv[])
 			theEnvelope.Seal(*pServerNym, strEnvelopeContents);
 			// -----------------------------------
 
-			OT_API::TransportCallback(*pServerContract, theEnvelope);
+			OTAPI_Wrap::OTAPI()->TransportCallback(*pServerContract, theEnvelope);
 
 			/*
 			OTASCIIArmor ascEnvelope(theEnvelope); // ascEnvelope now contains the base64-encoded string of the sealed envelope contents.
@@ -3005,7 +2985,7 @@ int main(int argc, char* argv[])
 
 
 	OTPseudonym * pMyNym = NULL;
-	OTWallet * pWallet = NULL;
+	std::shared_ptr<OTWallet> pWallet = std::shared_ptr<OTWallet>();
 	OTServerContract * pServerContract = NULL;
 
 	// If we got down here, that means there were no commands on the command line 
@@ -3093,7 +3073,7 @@ int main(int argc, char* argv[])
 		{			
 			std::string strScript ="print(\"Hello, world\")";
 
-			OTScript_AutoPtr pScript = OTScriptFactory(strScript);
+			std::shared_ptr<OTScript> pScript = OTScriptFactory(strScript);
 
 			if (NULL != pScript.get())
 			{
@@ -3619,7 +3599,8 @@ int main(int argc, char* argv[])
 		// are in place (since in RPC mode, each message could be from a different nym 
 		// and to a different server.)
 		//
-		OTAPI_Wrap::OTAPI()->GetClient()->SetFocusToServerAndNym(*pServerContract, *pMyNym, &OT_API::TransportCallback);
+		if ((nullptr != pServerContract) && (nullptr != pMyNym))
+			OTAPI_Wrap::OTAPI()-> m_pClient -> SetFocusToServerAndNym(*pServerContract, *pMyNym);
 		// NOTE -- This MAY be unnecessary for ProcessUserCommand (since these args are passed
 		// in there already) but it's definitely necessary soon after for ProcessServerReply()
 		// (which comes next.)
@@ -4300,7 +4281,7 @@ int main(int argc, char* argv[])
 			theEnvelope.Seal(*pServerNym, strEnvelopeContents);							  
 			// -----------------------------------
 
-			OT_API::TransportCallback(*pServerContract, theEnvelope);
+			OTAPI_Wrap::OTAPI()->TransportCallback(*pServerContract, theEnvelope);
 
 			/*
 			OTString strConnectPath; 

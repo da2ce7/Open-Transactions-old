@@ -143,9 +143,6 @@ yIh+Yp/KBzySU3inzclaAfv102/t5xi1l+GTyWHiwZxlyt5PBVglKWx/Ust9CIvN
 #include <vector>
 #include <memory>
 
-// credit:stlplus library.
-#include "containers/simple_ptr.hpp"
-
 #include <stdint.h>
 
 #include <OTPassword.h>
@@ -163,17 +160,22 @@ private :
 
 	static OTAPI_Wrap * p_Wrap;
 
-	OT_API * p_OTAPI;
+	bool m_bInitialized;
+	bool m_bLoadedWallet;
 
-	OTAPI_Wrap();
+	static bool TheTransportCallback(const OTServerContract & sc, const OTEnvelope & env);
+
 
 public :
 
-	EXPORT static OTAPI_Wrap * It();
+	const	std::unique_ptr<OT_API> p_OTAPI;
 
-	EXPORT static OT_API * OTAPI();
+	EXPORT	OTAPI_Wrap();
+	EXPORT	~OTAPI_Wrap();
 
-	EXPORT static const bool & Cleanup();
+	EXPORT	static std::shared_ptr<OTAPI_Wrap> It();
+
+	EXPORT	static const std::unique_ptr<OT_API> & OTAPI();
 
 	EXPORT static int64_t StringToLong(const std::string & strNumber);
 	EXPORT static std::string LongToString(const int64_t & lNumber);
@@ -1801,7 +1803,7 @@ public :
 	// OT_FALSE (0) == rejection 
 	// Returns OT_BOOL.
 	//
-	EXPORT static bool Transaction_GetSuccess(
+	EXPORT static int32_t Transaction_GetSuccess(
 		const std::string & SERVER_ID,
 		const std::string & USER_ID,
 		const std::string & ACCOUNT_ID,
@@ -1811,7 +1813,7 @@ public :
 	// Gets the balance agreement success (from a transaction.)
 	// returns OT_BOOL.
 	//
-	EXPORT static bool Transaction_GetBalanceAgreementSuccess(
+	EXPORT static int32_t Transaction_GetBalanceAgreementSuccess(
 		const std::string & SERVER_ID,
 		const std::string & USER_ID,
 		const std::string & ACCOUNT_ID,

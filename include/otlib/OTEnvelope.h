@@ -143,6 +143,7 @@
 
 #include <set>
 #include <map>
+#include <memory>
 
 
 extern "C"
@@ -259,7 +260,7 @@ public:
                                  const OTSignature & theSignature,
                                  OTPasswordData    * pPWData=NULL) const=0;
     // ----------------------------------
-EXPORT    static OTCrypto * It();
+	EXPORT    static const std::unique_ptr<OTCrypto> & It();
     
 EXPORT    void Init();     
 EXPORT    void Cleanup();    

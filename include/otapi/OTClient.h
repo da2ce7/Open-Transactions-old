@@ -146,12 +146,12 @@ class OTAccount;
 class OTPayload;
 class OTMessage;
 class OTServerConnection;
+class OTMessageBuffer;
 class OTLedger;
 class OTTransaction;
 class OTWallet;
 
-#include "OTServerConnection.h"
-#include "OTMessageBuffer.h"
+
 
 // This class represents the "test client"
 //
@@ -160,14 +160,25 @@ class OTWallet;
 // the separation to keep it designed that way.
 //
 
+#include "OTServerConnection.h"
+#include "OTMessageBuffer.h"
+
 class OTClient
 {
+public:
+
+	explicit OTClient(OTServerConnection::TransportFunc tFunc);
+	OTClient();
+
 private:
-	OTWallet * m_pWallet; // NOT owned, but this pointer is here for convenience.
 
-	OTMessageBuffer m_MessageBuffer; // Incoming server replies are copied here for easy access.
-	OTMessageOutbuffer m_MessageOutbuffer; // Outgoing messages are copied here for easy access. 
+	OTServerConnection::TransportFunc transportFunc;
 
+	OTWallet * m_pWallet;   // NOT owned, but this pointer is here for convenience.
+	
+	OTMessageBuffer     m_MessageBuffer;    // Incoming server replies are copied here for easy access.
+	OTMessageOutbuffer  m_MessageOutbuffer; // Outgoing messages are copied here for easy access. 
+    
 
 	bool m_bRunningAsScript; // This is used to determine whether to activate certain messages automatically in
 	// the client based on various server replies to previous requests (based on what mode it's being used in...
@@ -175,20 +186,24 @@ private:
 	// messages. But if we are using the test client, aka the command line in --prompt mode, and the --script switch
 	// wasn't used to startup, (which would mean we're executing a script) then it's A-Okay to fire those auto messages.
 
+	
+	
 public:
+    
 
-	/// Any time a message is sent to the server, its request number is copied here.
-	/// Most server message functions return int, but technically a request number can
-	/// be long. So if the number being returned is too large for that int, it will return
-	/// -2 instead, and then another function can be called that returns lMostRecentRequestNumber
-	/// in string form, or whatever is easiest.
-	///
-	long m_lMostRecentRequestNumber;
 
-	int CalcReturnVal(const long & lRequestNumber);
+    /// Any time a message is sent to the server, its request number is copied here.
+    /// Most server message functions return int, but technically a request number can
+    /// be long. So if the number being returned is too large for that int, it will return
+    /// -2 instead, and then another function can be called that returns lMostRecentRequestNumber
+    /// in string form, or whatever is easiest.
+    ///
+    long m_lMostRecentRequestNumber;
 
-	// ---------------------------------------------
-
+    int CalcReturnVal(const long & lRequestNumber);
+    
+    // ---------------------------------------------
+    
 	bool IsRunningAsScript() const { return m_bRunningAsScript; }
 	void SetRunningAsScript() { m_bRunningAsScript = true; } // (default is false.)
 
@@ -338,7 +353,7 @@ public:
 	// inline bool IsConnected() { return m_pConnection->IsConnected(); }
 
 	// For RPC mode
-	EXPORT bool SetFocusToServerAndNym(OTServerContract & theServerContract, OTPseudonym & theNym, OT_CALLBACK_MSG pCallback);
+	EXPORT bool SetFocusToServerAndNym(OTServerContract & theServerContract, OTPseudonym & theNym);
 
 	// For the test client in SSL / TCP mode.
 	bool ConnectToTheFirstServerOnList(OTPseudonym & theNym,
@@ -349,7 +364,7 @@ public:
 	// on that list, based on ID. This will return a pointer, and then you do the
 	// same call you normally did from there.
 
-	OTClient();
+	
 	~OTClient();
 
 	bool InitClient(OTWallet & theWallet); // Need to call this before using.

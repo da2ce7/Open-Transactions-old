@@ -247,17 +247,12 @@ void OTClient::ProcessMessageOut(OTMessage & theMessage)
     // in the Nymbox, and then worst case, look it up in the Outbuffer and get my
     // fucking transaction numbers back again!
 
-	OTMessage * pMsg = new OTMessage; // a copy.
+	const std::unique_ptr<OTMessage> pMsg(new OTMessage()); // a copy.
     OT_ASSERT(NULL != pMsg);
     
 	if (pMsg->LoadContractFromString(strMessage))
         m_MessageOutbuffer.AddSentMessage(*pMsg);
-    else
-    {
-        // todo, log here.
-        delete pMsg;
-        pMsg = NULL;
-    }
+
     // ----------------------------------------
     
     OT_ASSERT_MSG(NULL != m_pConnection, "OTClient::ProcessMessageOut: ASSERT: NULL != m_pConnection\n");
@@ -377,7 +372,7 @@ bool OTClient::AcceptEntireNymbox(OTLedger				& theNymbox,
     //
  	OTPseudonym theIssuedNym, theRemovedNym;
 	
-	std::set<long> setNoticeNumbers;  // Trans#s I've successfully signed for, and have a notice of this from the server.
+	set<long> setNoticeNumbers;  // Trans#s I've successfully signed for, and have a notice of this from the server.
 	
 	// For each transaction in the nymbox, if it's in reference to a transaction request,
 	// then create an "accept" item for that blank transaction, and add it to my own, new,
@@ -434,7 +429,7 @@ bool OTClient::AcceptEntireNymbox(OTLedger				& theNymbox,
 			// That's when I do a lot of other things. But this is a no-biggie thing. It will almost
 			// always succeed and in the odd-event that it fails, I'll end up with a duplicate message
 			// in my mail. So what?
-			OTMessage * pMessage = new OTMessage;
+			unique_ptr<OTMessage> pMessage(new OTMessage());
 			
 			OT_ASSERT(NULL != pMessage);
 			
@@ -444,14 +439,9 @@ bool OTClient::AcceptEntireNymbox(OTLedger				& theNymbox,
 			//
 			if (pMessage->LoadContractFromString(strRespTo))
 			{
-				pNym->AddMail(*pMessage); // Now the Nym is responsible to delete it. It's in his "mail".
+				pNym->AddMail(std::move(pMessage)); // Now the Nym is responsible to delete it. It's in his "mail".
 				OTPseudonym * pSignerNym = pNym;
 				pNym->SaveSignedNymfile(*pSignerNym);
-			}
-			else 
-			{
-				delete pMessage; // Don't want to leak otherwise.
-				pMessage = NULL;
 			}
 		} // if message
 		
@@ -528,12 +518,12 @@ bool OTClient::AcceptEntireNymbox(OTLedger				& theNymbox,
             OTNumList theOutput;
             pTransaction->GetNumList(theOutput); // Get the numlist from the successNotice transaction
             // ----------------------------------
-            std::set<long> theNumbers;          // 
+            set<long> theNumbers;          // 
             theOutput.Output(theNumbers);       // Get the actual set of numbers from the numlist object.
             // --------------------------------
             // Iterate through those numbers...
             //
-            FOR_EACH(std::set<long>, theNumbers)
+            FOR_EACH(set<long>, theNumbers)
             {
                 const long lValue = *it;
                 // ----------------------
@@ -616,15 +606,13 @@ bool OTClient::AcceptEntireNymbox(OTLedger				& theNymbox,
                     }				
                     else // strOriginalReply.Exists() == true.
                     {
-                        OTMessage * pMessage = new OTMessage;
-                        OT_ASSERT_MSG(pMessage != NULL, "OTClient::AcceptEntireNymbox: OTMessage * pMessage = new OTMessage;");
+                        unique_ptr<OTMessage> pMessage(new OTMessage());
+                        OT_ASSERT_MSG(pMessage != NULL, "OTClient::AcceptEntireNymbox: shared_ptr<OTMessage> pMessage = new OTMessage;");
                         
                         if (false == pMessage->LoadContractFromString(strOriginalReply))
                         {
                             OTLog::vError("%s: Failed loading original server reply message from replyNotice:\n\n%s\n\n",
                                           szFunc, strOriginalReply.Get());
-                            delete pMessage;
-                            pMessage = NULL;
                         }
                         else // Success loading the server's original reply up into an OTMessage, from a string.
                         {
@@ -682,10 +670,10 @@ bool OTClient::AcceptEntireNymbox(OTLedger				& theNymbox,
 			//
             OTNumList theNumlist, theBlankList;
             pTransaction->GetNumList(theNumlist);
-            std::set<long> theNumbers;
+            set<long> theNumbers;
             theNumlist.Output(theNumbers);
             
-            FOR_EACH(std::set<long>, theNumbers)
+            FOR_EACH(set<long>, theNumbers)
             {
                 const long lTransactionNumber = *it;
                 // -----------------------------------------
@@ -796,7 +784,7 @@ bool OTClient::AcceptEntireNymbox(OTLedger				& theNymbox,
 //							  "Violating number (too low): %ld, Nym ID: %s \n", lViolator, strNymID.Get());
 //			else
 			{
-				FOR_EACH(std::set<long>, setNoticeNumbers)
+				FOR_EACH(set<long>, setNoticeNumbers)
 				{
 					const long lNoticeNum = (*it);
 					
@@ -2242,18 +2230,16 @@ bool OTClient::ProcessServerReply(OTMessage & theReply, OTLedger * pNymbox/*=NUL
 	{
 		OTLog::Error("Error: Server reply signature failed to verify in OTClient::ProcessServerReply\n");
 		
-		OTMessage * pMessage = &theReply; // I'm responsible to cleanup this object.
+		unique_ptr<OTMessage> pMessage(std::move(&theReply)); // I'm responsible to cleanup this object.
 		
-		delete pMessage;
-		pMessage = NULL;
 		
 		return false;
 	}
 	// ------------------------------------
     
-    OTMessage * pSentMsg = this->GetMessageOutbuffer().GetSentMessage(atol(theReply.m_strRequestNum.Get()),
+    shared_ptr<OTMessage> pSentMsg = this->GetMessageOutbuffer().GetSentMessage(atol(theReply.m_strRequestNum.Get()),
                                                                       strServerID,
-                                                                      strNymID); // doesn't delete.
+																	  strNymID); // doesn't delete.
 	// ------------------------------------
     // We couldn't find it in the "sent message" outbuffer (todo: persist this buffer on the Nym.)
     // That means we must have missed the original server reply, even though it DID happen. Then we
@@ -2275,9 +2261,7 @@ bool OTClient::ProcessServerReply(OTMessage & theReply, OTLedger * pNymbox/*=NUL
                        "We must have already processed it, and then removed it, earlier. "
                        "(Discarding.) Reply message:\n\n%s\n\n", strReply.Get());
         
-        OTMessage * pMessage = &theReply; // I'm responsible to cleanup this object.
-		delete pMessage;
-		pMessage = NULL;
+        unique_ptr<OTMessage> pMessage(std::move(&theReply)); // I'm responsible to cleanup this object.
         // --------------------
 		return false;
     }
@@ -2322,10 +2306,10 @@ bool OTClient::ProcessServerReply(OTMessage & theReply, OTLedger * pNymbox/*=NUL
     // So next step: Loop through the ack list on the server reply, and any numbers there can be REMOVED from the local
     // list...
     //
-    std::set<long> numlist_ack_reply;    
+    set<long> numlist_ack_reply;    
     if (theReply.m_AcknowledgedReplies.Output(numlist_ack_reply)) // returns false if the numlist was empty.
     {
-        FOR_EACH(std::set<long>, numlist_ack_reply)
+        FOR_EACH(set<long>, numlist_ack_reply)
         {
             const long lTempRequestNum = *it;
             // ----------------------------
@@ -2374,7 +2358,7 @@ bool OTClient::ProcessServerReply(OTMessage & theReply, OTLedger * pNymbox/*=NUL
 	{		
         // -----------------------------
         OTIdentifier RECENT_HASH;
-        const std::string str_server(strServerID.Get());
+        const string str_server(strServerID.Get());
         
         if (theReply.m_strNymboxHash.Exists())
         {
@@ -2414,7 +2398,7 @@ bool OTClient::ProcessServerReply(OTMessage & theReply, OTLedger * pNymbox/*=NUL
 		
         // -----------------------------
         OTIdentifier RECENT_HASH;
-        const std::string str_server(strServerID.Get());
+        const string str_server(strServerID.Get());
         
         if (theReply.m_strNymboxHash.Exists())
         {
@@ -2463,7 +2447,7 @@ bool OTClient::ProcessServerReply(OTMessage & theReply, OTLedger * pNymbox/*=NUL
 		
         // -----------------------------
         OTIdentifier RECENT_HASH;
-        const std::string str_server(strServerID.Get());
+        const string str_server(strServerID.Get());
         
         if (theReply.m_strNymboxHash.Exists())
         {
@@ -2535,7 +2519,7 @@ bool OTClient::ProcessServerReply(OTMessage & theReply, OTLedger * pNymbox/*=NUL
 
         // -----------------------------
         OTIdentifier RECENT_HASH;
-        const std::string str_server(strServerID.Get());
+        const string str_server(strServerID.Get());
         
         if (theReply.m_strNymboxHash.Exists())
         {
@@ -2630,7 +2614,7 @@ bool OTClient::ProcessServerReply(OTMessage & theReply, OTLedger * pNymbox/*=NUL
 		
         // -----------------------------
         OTIdentifier NYMBOX_HASH, RECENT_HASH;
-        const std::string str_server(strServerID.Get());
+        const string str_server(strServerID.Get());
         
         if (theReply.m_strNymboxHash.Exists())
         {
@@ -2691,7 +2675,7 @@ bool OTClient::ProcessServerReply(OTMessage & theReply, OTLedger * pNymbox/*=NUL
 //                
 //                if (OTTransaction::replyNotice == pTransaction->GetType())
 //                {
-//                    OTMessage * pMessage = this->GetSentMessage(*pTransaction);
+//                    shared_ptr<OTMessage> pMessage = this->GetSentMessage(*pTransaction);
 //                    
 //                    if (NULL != pMessage) // It WAS there in my sent buffer!
 //                    {
@@ -3100,7 +3084,7 @@ bool OTClient::ProcessServerReply(OTMessage & theReply, OTLedger * pNymbox/*=NUL
 		
         // -----------------------------
         OTIdentifier RECENT_HASH;
-        const std::string str_server(strServerID.Get());
+        const string str_server(strServerID.Get());
         
         if (theReply.m_strNymboxHash.Exists())
         {
@@ -3564,7 +3548,7 @@ bool OTClient::ProcessServerReply(OTMessage & theReply, OTLedger * pNymbox/*=NUL
                                                 OTCleanup<OTDB::TradeDataNym> theDataAngel(*pData);
                                                 
                                                 /*
-                                                 std::stringstream ss;
+                                                 stringstream ss;
                                                  ss << theTrade.GetTransactionNum();
                                                  pData->transaction_id = ss.str(); ss.str(""); */
                                                 
@@ -4184,7 +4168,7 @@ bool OTClient::ProcessServerReply(OTMessage & theReply, OTLedger * pNymbox/*=NUL
             // -----------------------------
             OTIdentifier THE_HASH;
             const OTString strAcctID(ACCOUNT_ID);
-            const std::string str_acct_id(strAcctID.Get());
+            const string str_acct_id(strAcctID.Get());
             
             if (theReply.m_strInboxHash.Exists())
             {
@@ -4329,7 +4313,7 @@ bool OTClient::ProcessServerReply(OTMessage & theReply, OTLedger * pNymbox/*=NUL
             // -----------------------------
             OTIdentifier THE_HASH;
             const OTString strAcctID(ACCOUNT_ID);
-            const std::string str_acct_id(strAcctID.Get());
+            const string str_acct_id(strAcctID.Get());
             
             if (theReply.m_strOutboxHash.Exists())
             {
@@ -5261,7 +5245,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
 		// User input.
 		// I need a second NymID, so I allow the user to enter it here.
 		OTString strNymID2;
-		strNymID2.OTfgets(std::cin);
+		strNymID2.OTfgets(cin);
 		
 		// -----------------------------------
 		
@@ -5342,7 +5326,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
 			// store a copy in the outmail.
 			// (not encrypted, since the Nymfile will be encrypted anyway.
 			//
-			OTMessage * pMessage = new OTMessage;
+			unique_ptr<OTMessage> pMessage(new OTMessage());
 			
 			OT_ASSERT(NULL != pMessage);
 			
@@ -5359,7 +5343,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
 			pMessage->SignContract(theNym);		
 			pMessage->SaveContract();
 			
-			theNym.AddOutmail(*pMessage); // Now the Nym is responsible to delete it. It's in his "outmail".
+			theNym.AddOutmail(std::move(pMessage)); // Now the Nym is responsible to delete it. It's in his "outmail".
 			
 			OTPseudonym & extraNym = theNym;
 			theNym.SaveSignedNymfile(extraNym);
@@ -5379,7 +5363,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
 		// User input.
 		// I need a second NymID, so I allow the user to enter it here.
 		OTString strNymID2;
-		strNymID2.OTfgets(std::cin);
+		strNymID2.OTfgets(cin);
 		
 		// (0) Set up the REQUEST NUMBER and then INCREMENT IT
 		theNym.GetCurrentRequestNum(strServerID, lRequestNumber);
@@ -5433,9 +5417,9 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
 		 
 		OTString strTempPath;
 		strTempPath.Format("%s%s%s%s%s", OTLog::Path(), OTLog::PathSeparator(), "sample-contract", OTLog::PathSeparator(), "tokens.xml");
-		std::ifstream in(strTempPath.Get(), std::ios::binary);
+		ifstream in(strTempPath.Get(), ios::binary);
 		
-		std::ifstream in(strTempPath.Get(), std::ios::binary);
+		ifstream in(strTempPath.Get(), ios::binary);
 		
 		if (in.fail())
 		{
@@ -5443,10 +5427,10 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
 		}
 		OT_ASSERT(!in.fail());
 		
-		std::stringstream buffer;
+		stringstream buffer;
 		buffer << in.rdbuf();
 		
-		std::string contents(buffer.str());
+		string contents(buffer.str());
 		
 		strSourceContract = contents.c_str();
 		 */
@@ -5536,17 +5520,17 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
 		
 		// FIRST get the Asset Type ID for the basket
 		OTLog::Output(0, "Enter the basket's Asset Type ID (aka Contract ID): ");
-		str_BASKET_CONTRACT_ID.OTfgets(std::cin);
+		str_BASKET_CONTRACT_ID.OTfgets(cin);
 		
 		// FIRST get the Asset Type ID for the basket
 		OTLog::Output(0, "Enter an ACCOUNT ID of yours for an account that has the same asset type: ");
-		str_MAIN_ACCOUNT_ID.OTfgets(std::cin);
+		str_MAIN_ACCOUNT_ID.OTfgets(cin);
 		OTIdentifier MAIN_ACCOUNT_ID(str_MAIN_ACCOUNT_ID);
 		
 		// which direction is the exchange?
 		OTString strDirection;
 		OTLog::Output(0, "Are you exchanging in or out? [in]: ");
-		strDirection.OTfgets(std::cin);
+		strDirection.OTfgets(cin);
 	
         const bool bDirection = (strDirection.Compare("in") || strDirection.Compare("In"));
 		
@@ -5630,7 +5614,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
                             // Show the minimum transfer amount to the customer and ask him to choose a multiple for the transfer
                             OTLog::vOutput(0, "The minimum transfer amount for this basket is %ld. You may only exchange in multiples of it.\n"
                                            "Choose any multiple [1]: ", theBasket.GetMinimumTransfer());
-                            strTemp.OTfgets(std::cin);
+                            strTemp.OTfgets(cin);
                             nTransferMultiple = atoi(strTemp.Get()); 
                             strTemp.Release();
                             if (nTransferMultiple <= 0)
@@ -5661,7 +5645,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
                                                "existing Account ID of the same asset type: ", 
                                                i+1, str_SUB_CONTRACT_ID.Get());
                                 OTString str_TEMP_ACCOUNT_ID;
-                                str_TEMP_ACCOUNT_ID.OTfgets(std::cin);
+                                str_TEMP_ACCOUNT_ID.OTfgets(cin);
                                 OTIdentifier TEMP_ACCOUNT_ID(str_TEMP_ACCOUNT_ID);
                                 
                                 
@@ -5752,7 +5736,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
                             theMessage.m_ascPayload			= ascLedger;
                             
                             OTIdentifier NYMBOX_HASH;
-                            const std::string str_server(strServerID.Get());
+                            const string str_server(strServerID.Get());
                             const bool bNymboxHash = theNym.GetNymboxHash(str_server, NYMBOX_HASH);
                             
                             if (bNymboxHash)
@@ -5803,7 +5787,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
 		
 		// Collect NUMBER OF CONTRACTS for the basket.
 		OTLog::Output(0, "How many different asset types will compose this new basket? [2]: ");
-		strTemp.OTfgets(std::cin);
+		strTemp.OTfgets(cin);
 		int nBasketCount = atoi(strTemp.Get());
 		if (0 >= nBasketCount)
 			nBasketCount = 2;
@@ -5816,7 +5800,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
 				"As those are only the *minimum* amounts, you could also transfer (in or out) in *any* multiple of\n"
 				"those numbers.\n\n");
 		OTLog::Output(0, "What is the minimum transfer amount for the basket currency itself? [100]: ");
-		strTemp.Release(); strTemp.OTfgets(std::cin);
+		strTemp.Release(); strTemp.OTfgets(cin);
 		long lMinimumTransferAmount = atoi(strTemp.Get());
 		if (0 == lMinimumTransferAmount)
 			lMinimumTransferAmount = 100;
@@ -5828,13 +5812,13 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
 		for (int i = 0; i < nBasketCount; i++)
 		{
 			OTLog::vOutput(0, "Enter contract ID # %d: ", i+1);
-			strTemp.Release(); strTemp.OTfgets(std::cin);
+			strTemp.Release(); strTemp.OTfgets(cin);
 			
 			OTIdentifier SUB_CONTRACT_ID(strTemp.Get());
 			
 			// After each ID, collect the minimum transfer amount for EACH contract.
 			OTLog::Output(0, "Enter minimum transfer amount for that asset type: ");
-			strTemp.Release(); strTemp.OTfgets(std::cin);
+			strTemp.Release(); strTemp.OTfgets(cin);
 			
 			lMinimumTransferAmount = atol(strTemp.Get());
 			
@@ -5899,7 +5883,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
 		// User input.
 		// I need a from account
 		OTString strAssetID;
-		strAssetID.OTfgets(std::cin);
+		strAssetID.OTfgets(cin);
 		
 		// (0) Set up the REQUEST NUMBER and then INCREMENT IT
 		theNym.GetCurrentRequestNum(strServerID, lRequestNumber);
@@ -5935,7 +5919,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
 			OTLog::Output(0, "Please enter an asset Account ID (FROM acct): ");
 			// User input.
 			// I need a from account
-			strFromAcct.OTfgets(std::cin);
+			strFromAcct.OTfgets(cin);
 			
 			if (strFromAcct.GetLength() < 2)
 				return (-1);
@@ -5984,7 +5968,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
             
 			// User input.
 			// I need a from account
-			strRecipientAcct.OTfgets(std::cin);
+			strRecipientAcct.OTfgets(cin);
 			
 			if (strRecipientAcct.GetLength() < 2)
 				return (-1);			
@@ -6003,7 +5987,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
             OTLog::Output(0, "Please enter an amount: ");
             // User input.
             // I need an amount
-            strAmount.OTfgets(std::cin);
+            strAmount.OTfgets(cin);
         }
 		
 		const long lTotalAmount	= (0 == lTransactionAmount) ?  // If nothing was passed in, then use atol(strAmount), 
@@ -6130,7 +6114,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
 				theMessage.m_ascPayload			= ascLedger;
 				
                 OTIdentifier NYMBOX_HASH;
-                const std::string str_server(strServerID.Get());
+                const string str_server(strServerID.Get());
                 const bool bNymboxHash = theNym.GetNymboxHash(str_server, NYMBOX_HASH);
                 
                 if (bNymboxHash)
@@ -6171,7 +6155,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
 		// User input.
 		// I need a server ID
 		OTString strContractID;
-		strContractID.OTfgets(std::cin);
+		strContractID.OTfgets(cin);
 		
 		const OTIdentifier theTargetID(strContractID);
 		
@@ -6183,7 +6167,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
 			// User input.
 			// I need a name
 			OTString strNewName;
-			strNewName.OTfgets(std::cin);
+			strNewName.OTfgets(cin);
 			
 			pTargetContract->SetName(strNewName);
 			
@@ -6205,7 +6189,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
 		// User input.
 		// I need a server ID
 		OTString strContractID;
-		strContractID.OTfgets(std::cin);
+		strContractID.OTfgets(cin);
 		
 		const OTIdentifier theTargetID(strContractID);
 		
@@ -6217,7 +6201,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
 			// User input.
 			// I need a name
 			OTString strNewName;
-			strNewName.OTfgets(std::cin);
+			strNewName.OTfgets(cin);
 			
 			pTargetContract->SetName(strNewName);
 			
@@ -6239,7 +6223,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
 		// User input.
 		// I need a nym ID
 		OTString strNymID;
-		strNymID.OTfgets(std::cin);
+		strNymID.OTfgets(cin);
 		
 		const OTIdentifier theTargetNymID(strNymID);
 		
@@ -6251,29 +6235,29 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
 			// User input.
 			// I need a name
 			OTString strNewName;
-			strNewName.OTfgets(std::cin);
+			strNewName.OTfgets(cin);
 			
 			OTString strOldName(pTargetNym->GetNymName()); // just in case.
 			
-//			std::cout << "DEBUG 1 " << std::endl;
+//			cout << "DEBUG 1 " << endl;
 			
 			pTargetNym->SetNymName(strNewName);
 			
-//			std::cout << "DEBUG 2 " << std::endl;
+//			cout << "DEBUG 2 " << endl;
 
 			if (pTargetNym->SaveSignedNymfile(theNym)) // theNym is signer on this file.
 			{
 
-//				std::cout << "DEBUG 3 " << std::endl;
+//				cout << "DEBUG 3 " << endl;
 
 				m_pWallet->SaveWallet(); // Only 'cause the nym's name is stored here, too.
-//				std::cout << "DEBUG 4 " << std::endl;
+//				cout << "DEBUG 4 " << endl;
 
 			}
 			else
 				pTargetNym->SetNymName(strOldName);
 			
-//			std::cout << "DEBUG 5 " << std::endl;
+//			cout << "DEBUG 5 " << endl;
 
 		}
 		else 
@@ -6292,7 +6276,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
 		// User input.
 		// I need an account
 		OTString strAcctID;
-		strAcctID.OTfgets(std::cin);
+		strAcctID.OTfgets(cin);
 		
 		if (strAcctID.GetLength() < 2)
 			return (-1);
@@ -6307,7 +6291,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
 			// User input.
 			// I need a name
 			OTString strNewName;
-			strNewName.OTfgets(std::cin);
+			strNewName.OTfgets(cin);
 			
 			pTheAccount->SetName(strNewName);
 			pTheAccount->ReleaseSignatures();
@@ -6362,7 +6346,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
 			OTLog::Output(0, "Please enter an asset Account ID (to get its INBOX): ");
 			// User input.
 			// I need a from account
-			strFromAcct.OTfgets(std::cin);
+			strFromAcct.OTfgets(cin);
 			
 			if (strFromAcct.GetLength() < 2)
 				return (-1);
@@ -6445,7 +6429,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
 			OTLog::Output(0, "Please enter an asset Account ID (to get its OUTBOX): ");
 			// User input.
 			// I need a from account
-			strFromAcct.OTfgets(std::cin);
+			strFromAcct.OTfgets(cin);
 			
 			if (strFromAcct.GetLength() < 2)
 				return (-1);
@@ -6605,7 +6589,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
         theMessage.SetAcknowledgments(theNym); // Must be called AFTER theMessage.m_strServerID is already set. (It uses it.)
 
         OTIdentifier EXISTING_NYMBOX_HASH;
-        const std::string str_server_id(strServerID.Get());
+        const string str_server_id(strServerID.Get());
         
         const bool bSuccess = theNym.GetNymboxHash(str_server_id, EXISTING_NYMBOX_HASH);
         
@@ -6636,7 +6620,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
 			OTLog::Output(0, "Please enter an asset Account ID (to PROCESS its INBOX): ");
 			// User input.
 			// I need a from account
-			strFromAcct.OTfgets(std::cin);
+			strFromAcct.OTfgets(cin);
 			
 			if (strFromAcct.GetLength() < 2)
 				return (-1);
@@ -6724,7 +6708,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
 			OTLog::Output(0, "Please enter an asset Account ID (to PROCESS its INBOX): ");
 			// User input.
 			// I need a from account
-			strFromAcct.OTfgets(std::cin);
+			strFromAcct.OTfgets(cin);
 			
 			if (strFromAcct.GetLength() < 2)
 				return (-1);
@@ -6799,7 +6783,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
 		theMessage.m_strAcctID			= strAcctID;
 		
         OTIdentifier NYMBOX_HASH;
-        const std::string str_server(strServerID.Get());
+        const string str_server(strServerID.Get());
         const bool bNymboxHash = theNym.GetNymboxHash(str_server, NYMBOX_HASH);
         
         if (bNymboxHash)
@@ -6830,7 +6814,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
 			OTLog::Output(0, "Please enter an asset Account ID (to download its intermediary file): ");
 			// User input.
 			// I need a from account
-			strFromAcct.OTfgets(std::cin);
+			strFromAcct.OTfgets(cin);
 			
 			if (strFromAcct.GetLength() < 2)
 				return (-1);
@@ -6910,7 +6894,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
 		// User input.
 		// I need an account
 		OTString strAssetID;
-		strAssetID.OTfgets(std::cin);
+		strAssetID.OTfgets(cin);
 		
 		if (strAssetID.GetLength() < 2)
 			return (-1);
@@ -6947,7 +6931,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
 		// User input.
 		// I need an account
 		OTString strAssetID;
-		strAssetID.OTfgets(std::cin);
+		strAssetID.OTfgets(cin);
 		
 		if (strAssetID.GetLength() < 2)
 			return (-1);
@@ -6989,7 +6973,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
 			OTLog::Output(0, "Please enter an asset Account ID to deposit your tokens to: ");
 			// User input.
 			// I need a from account
-			strFromAcct.OTfgets(std::cin);
+			strFromAcct.OTfgets(cin);
 			
 			if (strFromAcct.GetLength() < 2)
 				return (-1);
@@ -7076,7 +7060,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
 			
 			OTLog::Output(0, "How many tokens would you like to deposit? ");
 			OTString strTokenCount;
-			strTokenCount.OTfgets(std::cin);
+			strTokenCount.OTfgets(cin);
 			const int nTokenCount = atoi(strTokenCount.Get());
 			
             OTNym_or_SymmetricKey theNymAsOwner(theNym), theServerNymAsOwner(*pServerNym);
@@ -7206,7 +7190,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
 				theMessage.m_ascPayload			= ascLedger;
 				
                 OTIdentifier NYMBOX_HASH;
-                const std::string str_server(strServerID.Get());
+                const string str_server(strServerID.Get());
                 const bool bNymboxHash = theNym.GetNymboxHash(str_server, NYMBOX_HASH);
                 
                 if (bNymboxHash)
@@ -7253,7 +7237,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
 			OTLog::Output(0, "Please enter an asset Account ID: ");
 			// User input.
 			// I need a from account
-			strFromAcct.OTfgets(std::cin);
+			strFromAcct.OTfgets(cin);
 			
 			if (strFromAcct.GetLength() < 2)
 				return (-1);
@@ -7543,7 +7527,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
 				theMessage.m_ascPayload			= ascLedger;
 				
                 OTIdentifier NYMBOX_HASH;
-                const std::string str_server(strServerID.Get());
+                const string str_server(strServerID.Get());
                 const bool bNymboxHash = theNym.GetNymboxHash(str_server, NYMBOX_HASH);
                 
                 if (bNymboxHash)
@@ -7589,7 +7573,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
 			OTLog::Output(0, "Please enter an asset Account ID (to deposit to): ");
 			// User input.
 			// I need a from account
-			strFromAcct.OTfgets(std::cin);
+			strFromAcct.OTfgets(cin);
 			
 			if (strFromAcct.GetLength() < 2)
 				return (-1);
@@ -7761,7 +7745,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
                     theMessage.m_ascPayload			= ascLedger;
                     
                     OTIdentifier NYMBOX_HASH;
-                    const std::string str_server(strServerID.Get());
+                    const string str_server(strServerID.Get());
                     const bool bNymboxHash = theNym.GetNymboxHash(str_server, NYMBOX_HASH);
                     
                     if (bNymboxHash)
@@ -7806,7 +7790,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
                           "Please enter an asset Account ID (FROM acct): ");
 			// User input.
 			// I need a from account
-			strFromAcct.OTfgets(std::cin);
+			strFromAcct.OTfgets(cin);
 			
 			if (strFromAcct.GetLength() < 2)
 				return (-1);
@@ -7857,7 +7841,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
             
 			// User input.
 			// I need a from account
-			strRecipientNym.OTfgets(std::cin);
+			strRecipientNym.OTfgets(cin);
 
 //			if (strRecipientNym.GetLength() < 2) // blank cheques are allowed.
 //				return (-1);			
@@ -7880,7 +7864,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
             OTLog::Output(0, "Please enter an amount: ");
             // User input.
             // I need an amount
-            strAmount.OTfgets(std::cin);
+            strAmount.OTfgets(cin);
         }
 		
 		const long lTotalAmount	= (0 == lTransactionAmount) ?  // If nothing was passed in, then use atol(strAmount), 
@@ -7896,7 +7880,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
 			// Memo
 			OTLog::Output(0, "Enter a memo for your check: ");
 			OTString strChequeMemo;
-			strChequeMemo.OTfgets(std::cin);
+			strChequeMemo.OTfgets(cin);
 			
 			// -----------------------------------------------------------------------
 
@@ -8007,7 +7991,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
 				theMessage.m_ascPayload			= ascLedger;
 				
                 OTIdentifier NYMBOX_HASH;
-                const std::string str_server(strServerID.Get());
+                const string str_server(strServerID.Get());
                 const bool bNymboxHash = theNym.GetNymboxHash(str_server, NYMBOX_HASH);
                 
                 if (bNymboxHash)
@@ -8061,7 +8045,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
 			OTLog::Output(0, "Please enter an Asset Account ID: ");
 			// User input.
 			// I need a from account
-			strFromAcct.OTfgets(std::cin);
+			strFromAcct.OTfgets(cin);
 			
 			if (strFromAcct.GetLength() < 2)
 				return (-1);
@@ -8108,7 +8092,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
             OTLog::Output(0, "Please enter an amount: ");
             // User input.
             // I need an amount
-            strAmount.OTfgets(std::cin);
+            strAmount.OTfgets(cin);
         }
 		
 		const	long lTotalAmount	= (0 == lTransactionAmount) ?  // If nothing was passed in, then use atol(strAmount), 
@@ -8281,7 +8265,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
 				theMessage.m_ascPayload			= ascLedger;
 				
                 OTIdentifier NYMBOX_HASH;
-                const std::string str_server(strServerID.Get());
+                const string str_server(strServerID.Get());
                 const bool bNymboxHash = theNym.GetNymboxHash(str_server, NYMBOX_HASH);
                 
                 if (bNymboxHash)
@@ -8328,7 +8312,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
         theMessage.SetAcknowledgments(theNym); // Must be called AFTER theMessage.m_strServerID is already set. (It uses it.)
 
         OTIdentifier NYMBOX_HASH;
-        const std::string str_server(strServerID.Get());
+        const string str_server(strServerID.Get());
         const bool bNymboxHash = theNym.GetNymboxHash(str_server, NYMBOX_HASH);
         
         if (bNymboxHash)
@@ -8386,20 +8370,20 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
                 
                 // FIRST get the Asset Type ID
                 OTLog::Output(0, "Enter the Asset Type ID of the market you want to trade in: ");
-                str_ASSET_TYPE_ID.OTfgets(std::cin);
+                str_ASSET_TYPE_ID.OTfgets(cin);
                 
                 // THEN GET AN ACCOUNT ID FOR THAT ASSET TYPE
                 OTLog::Output(0, "Enter an ACCOUNT ID of yours for an account of the same asset type: ");
-                str_ASSET_ACCT_ID.OTfgets(std::cin);		
+                str_ASSET_ACCT_ID.OTfgets(cin);		
                 
                 // NEXT get the Currency Type ID (which is also an asset type ID, FYI.)
                 // The trader just chooses one of them to be the "asset" and the other, the "currency".
                 OTLog::Output(0, "Enter the Currency Type ID of the market you want to trade in: ");
-                str_CURRENCY_TYPE_ID.OTfgets(std::cin);
+                str_CURRENCY_TYPE_ID.OTfgets(cin);
                 
                 // THEN GET AN ACCOUNT ID FOR THAT CURRENCY TYPE
                 OTLog::Output(0, "Enter an ACCOUNT ID of yours, for an account of that same currency type: ");
-                str_CURRENCY_ACCT_ID.OTfgets(std::cin);		
+                str_CURRENCY_ACCT_ID.OTfgets(cin);		
                 
                 
                 // Get a few long integers that we need...
@@ -8413,7 +8397,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
                 // -------------------------------------------------------------------
 
                 OTLog::Output(0, "What is the market granularity (or 'scale')? [1]: ");
-                strTemp.Release(); strTemp.OTfgets(std::cin);
+                strTemp.Release(); strTemp.OTfgets(cin);
                 lMarketScale = atol(strTemp.Get());
                 
                 if (lMarketScale < 1)
@@ -8422,7 +8406,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
                 // -------------------------------------------------------------------
                 
                 OTLog::Output(0, "What is the minimum increment per trade? (will be multiplied by the scale) [1]: ");
-                strTemp.Release(); strTemp.OTfgets(std::cin);
+                strTemp.Release(); strTemp.OTfgets(cin);
                 lMinimumIncrement = atol(strTemp.Get());
                 
                 lMinimumIncrement *= lMarketScale;
@@ -8435,7 +8419,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
 
                 OTLog::Output(0, "How many assets total do you have available for sale or purchase?\n"
                               "(Will be multiplied by minimum increment) [1]: ");
-                strTemp.Release(); strTemp.OTfgets(std::cin);
+                strTemp.Release(); strTemp.OTfgets(cin);
                 lTotalAssetsOnOffer = atol(strTemp.Get());
                 
 //              lTotalAssetsOnOffer *= lMinimumIncrement;  // this was a bug.
@@ -8452,7 +8436,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
                                    "That is, what is the lowest amount of currency you'd sell for, (if selling)\n"
                                    "Or the highest amount you'd pay (if you are buying).\nAgain, PER SCALE: ",
                                    lMarketScale);
-                    strTemp.Release(); strTemp.OTfgets(std::cin);
+                    strTemp.Release(); strTemp.OTfgets(cin);
                     lPriceLimit = atol(strTemp.Get());
                     
                     if (lPriceLimit < 1)
@@ -8465,7 +8449,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
                 bool bBuyingOrSelling;
                 OTString strDirection;
                 OTLog::Output(0, "Are you in the market to buy the asset type, or to sell? [buy]: ");
-                strDirection.OTfgets(std::cin);
+                strDirection.OTfgets(cin);
                 
                 if (strDirection.Compare("sell") || strDirection.Compare("Sell"))
                     bBuyingOrSelling	= true;
@@ -8586,7 +8570,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
                     theMessage.m_ascPayload			= ascLedger;
                     
                     OTIdentifier NYMBOX_HASH;
-                    const std::string str_server(strServerID.Get());
+                    const string str_server(strServerID.Get());
                     const bool bNymboxHash = theNym.GetNymboxHash(str_server, NYMBOX_HASH);
                     
                     if (bNymboxHash)
@@ -8623,7 +8607,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
 	{
         OTLog::Output(0, "Is the contract a server contract, or an asset contract [s/a]: ");
         OTString strContractType;
-        strContractType.OTfgets(std::cin);
+        strContractType.OTfgets(cin);
         
         char cContractType='s';
         bool bIsAssetContract = strContractType.At(0, cContractType);
@@ -8640,7 +8624,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
         // I need a from account, Yes even in a deposit, it's still the "From" account.
         // The "To" account is only used for a transfer. (And perhaps for a 2-way trade.)
         OTString strEscape;
-        strEscape.OTfgets(std::cin);
+        strEscape.OTfgets(cin);
         
         char cEscape='n';
         bool bEscaped = strEscape.At(0, cEscape);
@@ -8692,7 +8676,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
         OTLog::vOutput(0, ".\n..\n...\n....\n.....\n......\n.......\n........\n.........\n\n"
                        "NEW CONTRACT ID:  %s\n\n", strNewID.Get());
         
-        std::cout << strContract.Get() << std::endl;
+        cout << strContract.Get() << endl;
         
         // ------------------------------------------------------------------------
 
@@ -8707,7 +8691,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
 			OTLog::Output(0, "Please enter an Asset Account ID (to draw the cheque from): ");
 			// User input.
 			// I need a from account
-			strFromAcct.OTfgets(std::cin);
+			strFromAcct.OTfgets(cin);
 			
 			if (strFromAcct.GetLength() < 2)
 				return (-1);
@@ -8758,7 +8742,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
             
 			// User input.
 			// I need a from account
-			strRecipientNym.OTfgets(std::cin);
+			strRecipientNym.OTfgets(cin);
 			
 //			if (strRecipientNym.GetLength() < 2) // blank cheques are allowed.
 //				return (-1);			
@@ -8781,7 +8765,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
             OTLog::Output(0, "Please enter an amount: ");
             // User input.
             // I need an amount
-            strAmount.OTfgets(std::cin);
+            strAmount.OTfgets(cin);
         }
 		
 		const long lTotalAmount	= (0 == lTransactionAmount) ?  // If nothing was passed in, then use atol(strAmount), 
@@ -8811,7 +8795,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
         // Memo
         OTLog::Output(0, "Enter a memo for your check: ");
         OTString strChequeMemo;
-        strChequeMemo.OTfgets(std::cin);
+        strChequeMemo.OTfgets(cin);
         
         // -----------------------------------------------------------------------
         
@@ -8829,7 +8813,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
         long lExpirationInSeconds = 3600;
         OTLog::vOutput(0, "How many seconds before cheque expires? (defaults to 1 hour: %ld): ", lExpirationInSeconds);
         OTString strTemp;
-        strTemp.OTfgets(std::cin);
+        strTemp.OTfgets(cin);
         
         if (strTemp.GetLength() > 1)
             lExpirationInSeconds = atol(strTemp.Get());
@@ -8841,7 +8825,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
         
         OTLog::vOutput(0, "Cheque may be cashed STARTING date (defaults to now, in seconds) [%ld]: ", VALID_FROM);
         strTemp.Release();
-        strTemp.OTfgets(std::cin);
+        strTemp.OTfgets(cin);
         
         if (strTemp.GetLength() > 2)
             VALID_FROM = atol(strTemp.Get());
@@ -8864,7 +8848,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
             
             OTLog::Output(0, "\n\nOUTPUT (writeCheque):\n\n\n");
             // OTLog::Output actually goes to stderr, whereas the cout below is actually sent to standard output.
-            std::cout << strCheque.Get() << std::endl;
+            cout << strCheque.Get() << endl;
         }
         else 
         {
@@ -8891,7 +8875,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
                           "Enter the Merchant's (your) Asset Account ID that the payments will go to: ");
 			// User input.
 			// I need a from account
-			strMerchantAcct.OTfgets(std::cin);
+			strMerchantAcct.OTfgets(cin);
 			
 			if (strMerchantAcct.GetLength() < 2)
 				return -1;
@@ -8947,7 +8931,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
             
 			// User input.
 			// I need a from account
-			strCustomerAcct.OTfgets(std::cin);
+			strCustomerAcct.OTfgets(cin);
 			
 			if (strCustomerAcct.GetLength() < 2)
 				return -1;			
@@ -8971,7 +8955,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
             
 			// User input.
 			// I need a from account
-			strCustomerNym.OTfgets(std::cin);
+			strCustomerNym.OTfgets(cin);
 			
 			if (strCustomerNym.GetLength() < 2)
 				return -1;			
@@ -8994,7 +8978,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
         OTString strConsideration, strTemp;
                 
         OTLog::Output(0, "Enter a memo describing consideration for the payment plan: ");
-        strConsideration.OTfgets(std::cin);		
+        strConsideration.OTfgets(cin);		
                 
         // To write a payment plan, like a cheque, we need to burn one of our transaction numbers. (Presumably
         // the wallet is also storing a couple of these, since they are needed to perform any transaction.)
@@ -9038,7 +9022,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
         OTLog::vOutput(0, "How many seconds before payment plan expires? (defaults to 1 day: %ld): ", 
                        lExpirationInSeconds);
         strTemp.Release();
-        strTemp.OTfgets(std::cin);
+        strTemp.OTfgets(cin);
         
         if (strTemp.GetLength() > 1)
             lExpirationInSeconds = atol(strTemp.Get());
@@ -9051,7 +9035,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
         OTLog::vOutput(0, "Payment plan becomes valid for processing STARTING date\n"
                        "(defaults to now, in seconds) [%ld]: ", VALID_FROM);
         strTemp.Release();
-        strTemp.OTfgets(std::cin);
+        strTemp.OTfgets(cin);
         
         if (strTemp.GetLength() > 2)
             VALID_FROM = atol(strTemp.Get());
@@ -9076,7 +9060,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
         bool bSuccessSetPaymentPlan		= true; // the default, in case user chooses not to have a payment plan
         
         OTLog::Output(0, "What is the Initial Payment Amount, if any? [0]: ");
-        strTemp.Release(); strTemp.OTfgets(std::cin);
+        strTemp.Release(); strTemp.OTfgets(cin);
         long lInitialPayment = atol(strTemp.Get());
         
         if (lInitialPayment > 0)
@@ -9086,7 +9070,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
             OTLog::vOutput(0, "From the Start Date forward, how long until the Initial Payment should charge?\n"
                            "(defaults to one minute, in seconds) [%d]: ", PAYMENT_DELAY);
             strTemp.Release();
-            strTemp.OTfgets(std::cin);
+            strTemp.OTfgets(cin);
             
             if ((strTemp.GetLength() > 1) && atol(strTemp.Get())>0)
                 PAYMENT_DELAY = atol(strTemp.Get());
@@ -9109,7 +9093,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
         // -----------------------------------------------------------------------
         
         OTLog::Output(0, "What is the regular payment amount, if any? [0]: ");
-        strTemp.Release(); strTemp.OTfgets(std::cin);
+        strTemp.Release(); strTemp.OTfgets(cin);
         long lRegularPayment = atol(strTemp.Get());
         
         if (lRegularPayment > 0) // If there are regular payments.
@@ -9121,7 +9105,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
             OTLog::vOutput(0, "From the Start Date forward, how long until the Regular Payments start?\n"
                            "(defaults to two minutes, in seconds) [%d]: ", PAYMENT_DELAY);
             strTemp.Release();
-            strTemp.OTfgets(std::cin);
+            strTemp.OTfgets(cin);
             
             if ((strTemp.GetLength() > 1) && atol(strTemp.Get())>0)
                 PAYMENT_DELAY = atol(strTemp.Get());
@@ -9133,7 +9117,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
             OTLog::vOutput(0, "Once payments begin, how much time should elapse between each payment?\n"
                            "(defaults to thirty seconds) [%d]: ", PAYMENT_PERIOD);
             strTemp.Release();
-            strTemp.OTfgets(std::cin);
+            strTemp.OTfgets(cin);
             
             if ((strTemp.GetLength() > 1) && atol(strTemp.Get())>0)
                 PAYMENT_PERIOD = atol(strTemp.Get());
@@ -9145,7 +9129,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
             OTLog::vOutput(0, "From start date, do you want the plan to expire after a certain maximum time?\n"
                            "(defaults to 0 for no) [%d]: ", PLAN_LENGTH);
             strTemp.Release();
-            strTemp.OTfgets(std::cin);
+            strTemp.OTfgets(cin);
             
             if (strTemp.GetLength() > 1)
                 PLAN_LENGTH = atol(strTemp.Get());
@@ -9153,7 +9137,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
             // -----------------------------------------------------------------------
             
             OTLog::Output(0, "Should there be some maximum number of payments? (Zero for no maximum.) [0]: ");
-            strTemp.Release(); strTemp.OTfgets(std::cin);
+            strTemp.Release(); strTemp.OTfgets(cin);
             int nMaxPayments = atoi(strTemp.Get());
             
             bSuccessSetPaymentPlan = thePlan.SetPaymentPlan(lRegularPayment, PAYMENT_DELAY, 
@@ -9178,7 +9162,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
         OTLog::Output(0, "\n\n(Make sure to have your Customer 'confirm' the payment plan, before he activates it at "
                        "the server using the 'plan' command in the OT prompt, or --activateplan at the command-line):\n\n");
 
-        std::cout << strPlan.Get() << std::endl;
+        cout << strPlan.Get() << endl;
         
         return 0; // sends no server message in this case.
     }
@@ -9259,7 +9243,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
         // The above OTLog::Output() actually outputs to stderr (cerr). That's on purpose.
         // But the below output actually outputs to stdout, which is also on purpose.
         //
-        std::cout << strOutput.Get() << std::endl;
+        cout << strOutput.Get() << endl;
         
         return 0; // no server message being sent, in this case.
     }
@@ -9377,7 +9361,7 @@ int OTClient::ProcessUserCommand(OTClient::OT_CLIENT_CMD_TYPE requestedCommand,
 				theMessage.m_ascPayload			= ascLedger;
 				
                 OTIdentifier NYMBOX_HASH;
-                const std::string str_server(strServerID.Get());
+                const string str_server(strServerID.Get());
                 const bool bNymboxHash = theNym.GetNymboxHash(str_server, NYMBOX_HASH);
                 
                 if (bNymboxHash)
@@ -9483,12 +9467,12 @@ bool OTClient::ConnectToTheFirstServerOnList(OTPseudonym & theNym,
 /// Used in RPC mode (instead of Connect.)
 /// Whenever a message needs to be processed, this function is called first, in lieu
 /// of Connect(), so that the right pointers and IDs are in place for OTClient to do its thing.
-bool OTClient::SetFocusToServerAndNym(OTServerContract & theServerContract, OTPseudonym & theNym, OT_CALLBACK_MSG pCallback)
+bool OTClient::SetFocusToServerAndNym(OTServerContract & theServerContract, OTPseudonym & theNym)
 {
-	OT_ASSERT(NULL != pCallback);
+//	OT_ASSERT(NULL != tCallbackFunc);
 	OT_ASSERT(NULL != m_pConnection);
     
-	return m_pConnection->SetFocus(theNym, theServerContract, pCallback);
+	return m_pConnection->SetFocus(theNym, theServerContract);
 }
 
 
@@ -9553,7 +9537,7 @@ bool OTClient::InitClient(OTWallet & theWallet)
 
     
     
-	m_pConnection	= new OTServerConnection(theWallet, *this);
+	m_pConnection	= new OTServerConnection(transportFunc, theWallet, *this);
 	m_pWallet		= &theWallet;
 
     
@@ -9567,17 +9551,24 @@ bool OTClient::InitClient(OTWallet & theWallet)
 	return true;
 }
 
-
-
-
-OTClient::OTClient() :
-    m_pWallet(NULL), 
-    m_bRunningAsScript(false), 
-    m_lMostRecentRequestNumber(0), 
-    m_pConnection(NULL), 
-    m_bInitialized(false)
+OTClient::OTClient(OTServerConnection::TransportFunc tFunc)
+	: m_pWallet(NULL),
+	m_bRunningAsScript(false),
+	m_lMostRecentRequestNumber(0),
+	m_pConnection(NULL),
+	m_bInitialized(false),
+	transportFunc(tFunc)
 {
+}
 
+
+OTClient::OTClient()
+	: m_pWallet(NULL),
+	m_bRunningAsScript(false),
+	m_lMostRecentRequestNumber(0),
+	m_pConnection(NULL),
+	m_bInitialized(false)  
+{
 }
 
 OTClient::~OTClient()

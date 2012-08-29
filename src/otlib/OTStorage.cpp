@@ -128,10 +128,6 @@
 #include <sstream>
 
 
-// credit:stlplus library.
-#include "containers/simple_ptr.hpp"
-
-
 #include "OTStorage.h"
 
 #include "OTASCIIArmor.h"
@@ -972,7 +968,7 @@ namespace OTDB
 	
 #define IMPLEMENT_GET_ADD_REMOVE(scope, name) \
 	\
-	typedef stlplus::simple_ptr_clone<name> PointerTo##name; \
+	typedef std::shared_ptr<name> PointerTo##name; \
 	\
 	typedef std::deque< PointerTo##name > listOf##name##s; \
 	\
@@ -980,7 +976,7 @@ namespace OTDB
 	\
 	name * scope Get##name(size_t nIndex) \
 	{ if ((nIndex >= 0) && (nIndex < list_##name##s.size())) \
-	{ PointerTo##name theP = list_##name##s.at(nIndex); return theP.pointer(); } return NULL; } \
+	{ PointerTo##name theP = list_##name##s.at(nIndex); return theP.get(); } return NULL; } \
 	\
 	bool scope Remove##name(size_t nIndex##name) \
 	{ if ((nIndex##name >= 0) && (nIndex##name < list_##name##s.size())) \
@@ -1267,7 +1263,7 @@ namespace OTDB
 	{ \
 		PointerTo##element_type thePtr = (*ii); \
 \
-		element_type##Msgpack * pObject = dynamic_cast<element_type##Msgpack *>(thePtr.pointer()); \
+		element_type##Msgpack * pObject = dynamic_cast<element_type##Msgpack *>(thePtr.get()); \
 \
 		OT_ASSERT (NULL != pObject); \
 \
@@ -1780,7 +1776,7 @@ namespace OTDB
 	for (std::deque<PointerTo##element_type>::iterator ii = list_##element_type##s.begin(); ii != list_##element_type##s.end(); ++ii) \
 	{ \
 		PointerTo##element_type thePtr = (*ii); \
-		element_type##PB * pObject = dynamic_cast<element_type##PB *>(thePtr.pointer()); \
+		element_type##PB * pObject = dynamic_cast<element_type##PB *>(thePtr.get()); \
 			OT_ASSERT (NULL != pObject); \
 		::google::protobuf::Message * pMessage = pObject->getPBMessage(); \
 			OT_ASSERT (NULL != pMessage); \

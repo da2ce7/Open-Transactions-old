@@ -588,7 +588,7 @@ bool OTScriptable::ExecuteCallback (OTClause & theCallbackClause, mapOfVariables
 	const std::string str_code		=	theCallbackClause.GetCode();	// source code for the script.
 	const std::string str_language	=	pBylaw->GetLanguage();			// language it's in. (Default is "chai")
 	
-	OTScript_AutoPtr pScript = OTScriptFactory(str_code, &str_language);
+	std::shared_ptr<OTScript> pScript = OTScriptFactory(str_code, &str_language);
 	
 	// ---------------------------------------------------------------
 	//

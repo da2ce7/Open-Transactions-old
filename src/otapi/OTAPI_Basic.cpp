@@ -141,8 +141,6 @@ yIh+Yp/KBzySU3inzclaAfv102/t5xi1l+GTyWHiwZxlyt5PBVglKWx/Ust9CIvN
 #include <vector>
 #include <memory>
 
-// credit:stlplus library.
-#include "containers/simple_ptr.hpp"
 
 
 

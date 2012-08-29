@@ -128,11 +128,7 @@
 
 #include <algorithm>
 
-#ifdef _WIN32
 #include <memory>
-#else
-#include <tr1/memory>
-#endif
 
 //#include <boost/shared_ptr.hpp>
 
@@ -209,7 +205,7 @@
 
 
 
-OTScript_AutoPtr OTScriptFactory(const std::string & script_contents, 
+std::shared_ptr<OTScript> OTScriptFactory(const std::string & script_contents, 
                                  const std::string * p_script_type/*=NULL*/)
 {
 //  OTScript::SharedPtr retVal;
@@ -225,7 +221,7 @@ OTScript_AutoPtr OTScriptFactory(const std::string & script_contents,
           ) 
        ) // todo no hardcoding.
     {
-        OTScript_AutoPtr pChaiScript(new OTScriptChai(script_contents));                
+        std::shared_ptr<OTScript> pChaiScript(new OTScriptChai(script_contents));                
         return pChaiScript;
     }
     
@@ -241,7 +237,7 @@ OTScript_AutoPtr OTScriptFactory(const std::string & script_contents,
         OTLog::vError("OTScript::Factory: Script language (%s) not found.\n", p_script_type->c_str());
     
     
-    OTScript_AutoPtr retVal;
+    std::shared_ptr<OTScript> retVal;
 
     return retVal;
 }

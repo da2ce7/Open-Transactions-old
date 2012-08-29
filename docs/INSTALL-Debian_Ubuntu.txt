@@ -56,6 +56,9 @@ $ sudo aptitude install libboost-all-dev libzmq-dev libmsgpack-dev libssl-dev
 ##########################
 
 
+## OR ONLY IF YOUR GCC IS ALREADY 4.6 or higher ##
+
+
 # install general developer dependencies
 $ sudo aptitude install wget git build-essential libtool automake cmake pkg-config
 

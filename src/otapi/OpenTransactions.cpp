@@ -140,9 +140,6 @@
 #include <iostream>
 #include <fstream>
 
- // credit:stlplus library.
-#include "containers/simple_ptr.hpp"
-
 #ifdef _WIN32
 #include <WinsockWrapper.h>
 #endif
@@ -208,13 +205,10 @@ using namespace tthread;
 
 
 #include "OpenTransactions.h"
-
+#include "OTClient.h"
 
 #include "OTPseudonym.h"
 
-
-#include "OTClient.h"
-#include "OTServerConnection.h"
 
 
 #include "OTServerContract.h"
@@ -252,6 +246,192 @@ using namespace tthread;
 
 
 
+
+// -----------------------------------------------------
+//
+//  OT_CTX
+//
+//  This use this to make your OT_API contex.
+//  This class will make sure that InitOTAPI() is called
+//	and that CleanupOTAPI() is called on the program exit.
+//  (thanks to the use of a shared_ptr).
+//
+//
+//  useage:
+//
+//	const unique_ptr<OT_API> pOTAPI(OT_CTX::It() -> New());
+//  
+//  afterwards use pOTAPI -> SomeFunction();
+//
+
+
+unique_ptr<tthread::mutex> OT_CTX::s_p_ZMQ_Mutex = unique_ptr<tthread::mutex>(nullptr);
+unique_ptr<OTSocket> OT_CTX::s_p_Socket = unique_ptr<OTSocket>(nullptr);
+
+bool OT_CTX::bOTAPI = false;
+
+OT_CTX::OT_CTX()
+{
+	if (!bOTAPI)
+		if (!InitOTAPI()) OT_ASSERT(false);
+		else bOTAPI = true;
+}
+
+OT_CTX::~OT_CTX()
+{
+	if (!CleanupOTAPI()) OT_ASSERT(false);
+}
+
+unique_ptr<OT_API> OT_CTX::New(OTServerConnection::TransportFunc tFunc)
+{
+	unique_ptr<OT_API> p_API = unique_ptr<OT_API>(new OT_API(tFunc));
+
+	p_API -> Init();
+
+	return p_API;
+}
+
+//static
+shared_ptr<OT_CTX> OT_CTX::It()
+{
+	static shared_ptr<OT_CTX> pOT_CTX(nullptr);
+
+	if (nullptr == pOT_CTX) pOT_CTX = shared_ptr<OT_CTX>(new OT_CTX());
+	return pOT_CTX;
+}
+
+// ------------------------------------
+// Call this once per run of the software.
+//static
+bool OT_CTX::InitOTAPI()
+{
+	static int nCount = 0;
+	OT_ASSERT_MSG(0 == nCount, "OT_API::InitOTAPI: ASSERT: This function can only be called once.\n");
+	++nCount;
+	// ------------------------------------
+	OTLog::vOutput(0, "\n\nWelcome to Open Transactions -- version %s\n", 
+		OTLog::Version());
+
+	OTLog::vOutput(1, "(transport build: OTMessage -> OTEnvelope -> ZMQ )\n");
+
+
+	// ------------------------------------
+#ifdef _WIN32
+	WSADATA wsaData;
+	WORD wVersionRequested = MAKEWORD( 2, 2 );
+	int err = WSAStartup( wVersionRequested, &wsaData );
+
+	/* Tell the user that we could not find a usable		*/
+	/* Winsock DLL.											*/		
+
+	OT_ASSERT_MSG((err == 0), "WSAStartup failed!\n");
+
+
+	/*	Confirm that the WinSock DLL supports 2.2.			*/
+	/*	Note that if the DLL supports versions greater		*/
+	/*	than 2.2 in addition to 2.2, it will still return	*/
+	/*	2.2 in wVersion since that is the version we		*/
+	/*	requested.											*/
+
+	bool bWinsock = (LOBYTE(wsaData.wVersion) != 2 || HIBYTE(wsaData.wVersion) != 2);
+
+	/* Tell the user that we could not find a usable */
+	/* WinSock DLL.                                  */
+
+	if (!bWinsock) WSACleanup();  // do cleanup.
+	OT_ASSERT_MSG((!bWinsock), "Could not find a usable version of Winsock.dll\n");
+
+	/* The Winsock DLL is acceptable. Proceed to use it. */
+	/* Add network programming using Winsock here */
+	/* then call WSACleanup when done using the Winsock dll */
+	OTLog::vOutput(1,"The Winsock 2.2 dll was found okay\n");
+#endif
+
+
+	// ------------------------------------
+	// SIGNALS
+	//
+#if defined(OT_SIGNAL_HANDLING)
+	//
+	OTLog::SetupSignalHandler();  // <===== SIGNALS
+	//
+	// This is optional! You can always remove it using the OT_NO_SIGNAL_HANDLING
+	//  option, and plus, the internals only execute once anyway. (It keeps count.)
+#endif
+	// ------------------------------------
+	OT_CTX::s_p_ZMQ_Mutex = unique_ptr<tthread::mutex>(new tthread::mutex); // This is a new mutex, not a new thread.
+	// ------------------------------------    
+	OTCrypto::It()->Init(); // (OpenSSL gets initialized here.)
+	// ------------------------------------
+	// TODO in the case of Windows, figure err into this return val somehow.
+	// (Or log it or something.)
+	//
+
+	// Setup OTPath:
+	bool bSetupPathsSuccess = OTLog::Path_Setup(CLIENT_CONFIG_KEY);
+	OT_ASSERT_MSG(bSetupPathsSuccess,"OT_API::InitOTAPI: Failed to Setup Paths");
+
+	return true;
+}
+
+//static
+bool OT_CTX::CleanupOTAPI()
+{
+
+	// We clean these up in reverse order from the Init function, which just seems
+	// like the best default, in absence of any brighter ideas.
+	//
+	OTCrypto::It()->Cleanup();  // (OpenSSL gets cleaned up here.)
+
+	// ------------------------------------
+#ifdef _WIN32
+	WSACleanup(); // Corresponds to WSAStartup() in InitOTAPI().
+#endif
+
+	// Gotta love the unique_ptr's :)
+
+	    // NOTE: TODO: This shouldn't be here.
+    // Why not? Because InitOTAPI corresponds to CleanupOTAPI.
+    // But the PID init code is in OT_API::Init, NOT InitOTAPI. Therefore
+    // the PID cleanup code should likewise be in OT_API::Cleanup, NOT CleanupOTAPI.
+    // So then why is it here? Because OT_API::Cleanup doesn't exist yet...
+    
+    // Data Path
+    OTString strDataPath;
+    const bool bGetDataFolderSuccess = OTLog::Path_GetDataFolder(strDataPath);
+    OT_ASSERT_MSG(bGetDataFolderSuccess,"OT_API::CleanupOTAPI: Error! Unable to find data path."); 
+	// -------------------------------------------------------
+    // PID -- Set it to 0 in the lock file so the next time we run OT, it knows there isn't
+    // another copy already running (otherwise we might wind up with two copies trying to write
+    // to the same data folder simultaneously, which could corrupt the data...)
+    //
+    OTString strPIDPath;
+    strPIDPath.Format("%s%s%s", strDataPath.Get(), OTLog::PathSeparator(), "ot.pid"); // todo hardcoding.
+    
+    uint32_t the_pid = 0;
+    
+    std::ofstream pid_outfile(strPIDPath.Get());
+    
+    if (pid_outfile.is_open())
+    {
+        pid_outfile << the_pid;
+        pid_outfile.close();
+    }
+    else
+        OTLog::vError("Failed trying to open data locking file (to wipe PID back to 0): %s\n",
+                      strPIDPath.Get());
+    
+    // ------------------------------------
+	return true;   
+
+}
+
+
+
+
+
+
+
 // -------------------------------------------------------------------------
 // When the server and client (this API being a client) are built in XmlRpc/HTTP
 // mode, then a callback must be provided for passing the messages back and forth
@@ -280,14 +460,15 @@ using namespace tthread;
 //typedef bool (*OT_CALLBACK_MSG)(OTPayload & thePayload);
 //
 
-tthread::mutex * OT_API::s_p_ZMQ_Mutex = NULL;
-OTSocket       * OT_API::s_p_Socket    = NULL;
 
-//static
-void OT_API::TransportCallback(OTServerContract & theServerContract, OTEnvelope & theEnvelope)
+bool OT_API::TransportCallback(const OTServerContract & sc, const OTEnvelope & env)
 {
-    OT_ASSERT(NULL != OT_API::s_p_ZMQ_Mutex); // see OT_API:OTAPIInit.
-    tthread::lock_guard<tthread::mutex>  lock (*s_p_ZMQ_Mutex);
+
+	OTServerContract theServerContract = sc;
+	OTEnvelope theEnvelope =  env;
+
+    OT_ASSERT(nullptr != OT_CTX::s_p_ZMQ_Mutex); // see OT_API:OTAPIInit.
+    tthread::lock_guard<tthread::mutex>  lock (*OT_CTX::s_p_ZMQ_Mutex);
     // ----------------------------------------------
     const char * szFunc = "OT_API::TransportCallback";
     // ----------------------------------------------
@@ -295,14 +476,14 @@ void OT_API::TransportCallback(OTServerContract & theServerContract, OTEnvelope 
 	OTString	strServerHostname;
 
 
-	if (NULL == OTAPI_Wrap::OTAPI()->GetClient())							{ OTLog::vError("%s: Error: %s is NULL!\n", __FUNCTION__, "OTAPI_Wrap::OTAPI()->GetClient()");							OT_ASSERT(false); return; }
-	if (NULL == OTAPI_Wrap::OTAPI()->GetClient()->m_pConnection)			{ OTLog::vError("%s: Error: %s is NULL!\n", __FUNCTION__, "OTAPI_Wrap::OTAPI()->GetClient()->m_pConnection");			OT_ASSERT(false); return; }
-	if (NULL == OTAPI_Wrap::OTAPI()->GetClient()->m_pConnection->GetNym())	{ OTLog::vError("%s: Error: %s is NULL!\n", __FUNCTION__, "OTAPI_Wrap::OTAPI()->GetClient()->m_pConnection->GetNym()"); OT_ASSERT(false); return; }
+	if (nullptr == GetClient())							{ OTLog::vError("%s: Error: %s is NULL!\n", __FUNCTION__, "GetClient()");							OT_ASSERT(false); return false; }
+	if (NULL == GetClient() -> m_pConnection)			{ OTLog::vError("%s: Error: %s is NULL!\n", __FUNCTION__, "GetClient()->m_pConnection");			OT_ASSERT(false); return false; }
+	if (NULL == GetClient() -> m_pConnection -> GetNym())	{ OTLog::vError("%s: Error: %s is NULL!\n", __FUNCTION__, "GetClient()->m_pConnection->GetNym()");  OT_ASSERT(false); return false; }
 	
 	if (false == theServerContract.GetConnectInfo(strServerHostname, nServerPort))
 	{
 		OTLog::vError("%s: Failed retrieving connection info from server contract.\n", szFunc);
-		return;
+		return false;
 	}
     // ----------------------------------------------
     OTString strConnectPath;         
@@ -313,10 +494,10 @@ void OT_API::TransportCallback(OTServerContract & theServerContract, OTEnvelope 
 	
 	if (ascEnvelope.Exists())
 	{
-        if (NULL == OT_API::s_p_Socket)
-            OT_API::s_p_Socket = new OTSocket;
+        if (nullptr == OT_CTX::s_p_Socket)
+            OT_CTX::s_p_Socket =  unique_ptr<OTSocket>(new OTSocket());
         
-        OTSocket & theSocket = *(OT_API::s_p_Socket);
+        OTSocket & theSocket = *(OT_CTX::s_p_Socket);
         // --------------------------------------------
                 
         bool bSuccessSending = theSocket.Send(ascEnvelope, strConnectPath);  // <========
@@ -355,8 +536,7 @@ void OT_API::TransportCallback(OTServerContract & theServerContract, OTEnvelope 
                         theServerEnvelope;
                     if (theServerEnvelope.SetAsciiArmoredData(ascServerReply))
                     {
-                        bRetrievedReply = theServerEnvelope.Open(*(OTAPI_Wrap::OTAPI()->GetClient()->m_pConnection->GetNym()), 
-                                                                 strServerReply);
+                        bRetrievedReply = theServerEnvelope.Open(*(GetClient()->m_pConnection->GetNym()),strServerReply);
                     }
                     else
                     {
@@ -390,18 +570,16 @@ void OT_API::TransportCallback(OTServerContract & theServerContract, OTEnvelope 
                                   "\n\n PERHAPS YOU ARE RUNNING AN OLD VERSION OF THE SERVER ????? \n\n", szFunc);
                 }                    
                 // **********************************************************************
-                OTMessage * pServerReply = new OTMessage;
-                OT_ASSERT(NULL != pServerReply);
+				unique_ptr<OTMessage> pServerReply(new OTMessage());
+                OT_ASSERT(nullptr != pServerReply);
                 
                 if (bRetrievedReply && strServerReply.Exists() && pServerReply->LoadContractFromString(strServerReply))
                 {
                     // Now the fully-loaded message object (from the server, this time) can be processed by the OT library...
-                    OTAPI_Wrap::OTAPI()->GetClient()->ProcessServerReply(*pServerReply); // Client takes ownership and will handle cleanup.
+                    GetClient()->ProcessServerReply(*pServerReply); // Client takes ownership and will handle cleanup.
                 }
                 else
                 {
-                    delete pServerReply;
-                    pServerReply = NULL;
                     OTLog::vError("%s: Error loading server reply from string:\n\n%s\n\n", 
                                   szFunc, strRawServerReply.Get());
                 }
@@ -409,7 +587,8 @@ void OT_API::TransportCallback(OTServerContract & theServerContract, OTEnvelope 
             } // !success receiving.
             // ----------------------------------------------------------
         } // else (bSuccessSending)
-    } // if envelope exists.    
+    } // if envelope exists.
+	return true;
 } // transport callback.
 
 
@@ -418,17 +597,17 @@ void OT_API::TransportCallback(OTServerContract & theServerContract, OTEnvelope 
 /*
 void OT_API::TransportCallback(OTServerContract & theServerContract, OTEnvelope & theEnvelope)
 {
-    OT_ASSERT(NULL != OT_API::s_p_ZMQ_Mutex); // see OT_API:OTAPIInit.
+    OT_ASSERT(nullptr != OT_CTX::s_p_ZMQ_Mutex); // see OT_API:OTAPIInit.
     
-    tthread::lock_guard<tthread::mutex> lock(*s_p_ZMQ_Mutex);
+    tthread::lock_guard<tthread::mutex> lock(*OT_CTX::s_p_ZMQ_Mutex);
     
     // ----------------------------------------------
 	int			nServerPort = 0;
 	OTString	strServerHostname;
 	
-	OT_ASSERT_MSG((NULL != OTAPI_Wrap::OTAPI()->GetClient()) && 
-			      (NULL != OTAPI_Wrap::OTAPI()->GetClient()->m_pConnection) && 
-			      (NULL != OTAPI_Wrap::OTAPI()->GetClient()->m_pConnection->GetNym()), 
+	OT_ASSERT_MSG((NULL != GetClient()) && 
+			      (NULL != GetClient()->m_pConnection) && 
+			      (NULL != GetClient()->m_pConnection->GetNym()), 
 				  "OT_API::TransportCallback: Important things are NULL that shouldn't be.");
 	
 	if (false == theServerContract.GetConnectInfo(strServerHostname, nServerPort))
@@ -498,7 +677,7 @@ void OT_API::TransportCallback(OTServerContract & theServerContract, OTEnvelope 
 			while ((nReceiveTries++ < 25) && (false == (bSuccessReceiving = socket.recv(&reply, ZMQ_NOBLOCK))))
 				OTLog::SleepMilliseconds(200); // todo stop hardcoding. (And probably change how I send/receive, but for now I needed non-blocking...)
 			
-//			std::string str_Result;
+//			string str_Result;
 //			str_Result.reserve(reply.size());
 //			str_Result.append(static_cast<const char *>(reply.data()), reply.size());
 			
@@ -518,15 +697,15 @@ void OT_API::TransportCallback(OTServerContract & theServerContract, OTEnvelope 
 				
 				if (theServerEnvelope.SetAsciiArmoredData(ascServerReply))
 				{	
-					bool bOpened = theServerEnvelope.Open(*(OTAPI_Wrap::OTAPI()->GetClient()->m_pConnection->GetNym()), strServerReply);
+					bool bOpened = theServerEnvelope.Open(*(GetClient()->m_pConnection->GetNym()), strServerReply);
 					
-					OTMessage * pServerReply = new OTMessage;
+					shared_ptr<OTMessage> pServerReply = new OTMessage;
 					OT_ASSERT_MSG(NULL != pServerReply, "Error allocating memory in the OT API.");
 
 					if (bOpened && strServerReply.Exists() && pServerReply->LoadContractFromString(strServerReply))
 					{
 						// Now the fully-loaded message object (from the server, this time) can be processed by the OT library...
-						OTAPI_Wrap::OTAPI()->GetClient()->ProcessServerReply(*pServerReply); // the Client takes ownership and will handle cleanup.
+						GetClient()->ProcessServerReply(*pServerReply); // the Client takes ownership and will handle cleanup.
 					}
 					else
 					{
@@ -905,12 +1084,10 @@ bool OTSocket::Receive(OTString & strServerReply)
 // ---------------------------------------------------------------------------
 
 
-
-
-// The API begins here...
-OT_API::OT_API() :
-	m_pWallet(NULL),
-	m_pClient(NULL),
+OT_API::OT_API(OTServerConnection::TransportFunc tFunc) :
+	m_pClient(new OTClient(transportFunc)),
+	m_pSettings(nullptr),
+	m_pWallet(nullptr),
 	m_bInitialized(false)
 {
 	m_strDataPath = "";
@@ -918,25 +1095,27 @@ OT_API::OT_API() :
 	m_strWalletFilePath = "";
 	m_strConfigFilename = "";
 	m_strConfigFilePath = "";
+}
 
-	bool	bInitOTAPI = false;
+
+// The API begins here...
+OT_API::OT_API() :
+	m_pClient(new OTClient()),
+	m_pSettings(nullptr),
+	m_pWallet(nullptr),
+	m_bInitialized(false)
+{
+	m_strDataPath = "";
+	m_strWalletFilename = "";
+	m_strWalletFilePath = "";
+	m_strConfigFilename = "";
+	m_strConfigFilePath = "";
 }
 
 
 
 OT_API::~OT_API()
 {
-    // DELETE
-    //
-	if (NULL != m_pWallet)				delete m_pWallet;
-	if (NULL != m_pClient)				delete m_pClient;
-
-	// --------------------------------
-    // SET NULL
-    //
-	m_pWallet = NULL;
-	m_pClient = NULL;
-	
 }
 
 	// Get
@@ -953,7 +1132,7 @@ bool OT_API::LoadConfigFile()
 	const char * szFunc = "OT_API::LoadConfigFile()";
 
 	// Setup Config File
-	OTString strConfigPath, strConfigFilename, strConfigFilePath;
+	OTString strConfigPath, strConfigFilename;
 
 	if (!OTLog::Path_GetConfigFolder(strConfigPath)) {
 		OTLog::vError("%s: Error! Unable To get config folder!\n",szFunc);
@@ -962,28 +1141,28 @@ bool OT_API::LoadConfigFile()
 	if (!OTLog::GetMainConfigFilename(strConfigFilename)) {
 		OTLog::vError("%s: Error! Unable to get main config filename!\n",szFunc);
 		return false;
-	}
-	if (!OTLog::Path_RelativeToCanonical(strConfigFilePath,strConfigPath,strConfigFilename)) {
-		OTLog::vError("%s: Error! Unable to build config filepath\n!",szFunc);
-		return false;
-	}
+	};
 
-	SI_Error rc = SI_FAIL;
+	// Create Config Object (OTSettings)
+	shared_ptr<OTSettings> p_Config(new OTSettings(strConfigFilename,true));
 
-	// check if config file exists:
-	if (!OTLog::ConfirmExactFile(strConfigFilePath)){
-		OTLog::vOutput(1,"%s:  Config File doesn't exist ... Making it...\n Saved in: %s\n",szFunc,strConfigFilePath.Get());
-
-		rc = OTLog::Config_Save(strConfigFilePath);
-		OT_ASSERT_MSG(rc >=0, "OT_API::LoadConfigFile(): Assert failed: Unable to save new configuration file!\n");
-
-		if (!OTLog::Config_Reset()) return false; // Reset Config... we are going to try reloading it.
+	// First Load, Create new fresh config file if failed loading.
+	if (!p_Config -> Load())
+	{
+		OTLog::vOutput(0,"%s: Note: Unable to Load Config. Creating a new file: %s\n", szFunc, strConfigFilename.Get());
+		if (!p_Config -> Reset()) return false;
+		if (!p_Config -> Save()	) return false;
 	}
 
-	// Load, this time it must work... or else fail.
-	rc = OTLog::Config_Load(strConfigFilePath);
-	OT_ASSERT_MSG(rc >=0, "OT_API::LoadConfigFile(): Assert failed: Unable to load config file, file unloadable\n");
-	
+
+	if (!p_Config -> Reset()) return false;
+
+	// Second Load, Throw Assert if Failed loading.
+	if (!p_Config -> Load())
+	{
+		OTLog::vError(0,"%s: Error: Unable to load config file: %s It should exist, as we just saved it!\n", szFunc, strConfigFilename.Get());
+		OT_ASSERT(false);
+	}
 
 	// ---------------------------------------------
 	// LOGGING
@@ -992,7 +1171,7 @@ bool OT_API::LoadConfigFile()
 	{
 		bool bIsNewKey;
 		OTString strValue, strFullPath;
-		OTLog::Config_CheckSet_str("logging","log_filename",CLIENT_LOGFILE_FILENAME,strValue,bIsNewKey);
+		p_Config -> CheckSet_str("logging","log_filename",CLIENT_LOGFILE_FILENAME,strValue,bIsNewKey);
 		if (!OTLog::Path_RelativeToCanonical(strFullPath,strConfigPath,strValue)) return false;
 		OTLog::SetLogfile(strFullPath.Get());
 	}
@@ -1002,7 +1181,7 @@ bool OT_API::LoadConfigFile()
 	{
 		bool bIsNewKey;
 		long lValue;
-		OTLog::Config_CheckSet_long("logging","log_level",0,lValue,bIsNewKey);
+		p_Config -> CheckSet_long("logging","log_level",0,lValue,bIsNewKey);
 		OTLog::SetLogLevel(static_cast<int> (lValue));
 	}
 
@@ -1011,8 +1190,8 @@ bool OT_API::LoadConfigFile()
 	{
 		bool bNameKeyExist, bIsRelativeKeyExist, bIsRelative, bFolderExist;
 		OTString strValue, strFullPath;
-		OTLog::Config_Check_str("data","directory_name",strValue,bNameKeyExist);
-		OTLog::Config_Check_bool("data","directory_is_relative",bIsRelative,bIsRelativeKeyExist);
+		p_Config -> Check_str("data","directory_name",strValue,bNameKeyExist);
+		p_Config -> Check_bool("data","directory_is_relative",bIsRelative,bIsRelativeKeyExist);
 
 		if (!bNameKeyExist || !bIsRelativeKeyExist) {
 
@@ -1020,9 +1199,9 @@ bool OT_API::LoadConfigFile()
 			bIsRelative = true;
 
 			bool bNewOrUpdateName, bNewOrUpdateIsRelative;
-			OTLog::Config_Set_str("data","directory_name",strValue,bNewOrUpdateName);
-			OTLog::Config_Set_bool("data","directory_is_relative",bIsRelative,bNewOrUpdateIsRelative);
-		}
+			p_Config -> Set_str("data","directory_name",strValue,bNewOrUpdateName);
+			p_Config -> Set_bool("data","directory_is_relative",bIsRelative,bNewOrUpdateIsRelative);
+		};
 
 		if (!bIsRelative) strFullPath = strValue;
 		else if (!OTLog::Path_RelativeToCanonical(strFullPath,strConfigPath,strValue)) return false;
@@ -1043,7 +1222,7 @@ bool OT_API::LoadConfigFile()
 	{
 		bool bIsNewKey;
 		OTString strValue;
-		OTLog::Config_CheckSet_str("wallet","wallet_filename",CLIENT_WALLET_FILENAME,strValue,bIsNewKey);
+		p_Config -> CheckSet_str("wallet","wallet_filename",CLIENT_WALLET_FILENAME,strValue,bIsNewKey);
 		OT_API::SetWalletFilename(strValue);
 		OTLog::vOutput(1,"Using Wallet: %s\n",strValue.Get());
 	}
@@ -1066,12 +1245,12 @@ bool OT_API::LoadConfigFile()
 			";; multiple times per use case. (They can add up quick...)\n";
 
 		bool b_SectionExist;
-		OTLog::Config_CheckSetSection("latency",szComment,b_SectionExist);
+		p_Config -> CheckSetSection("latency",szComment,b_SectionExist);
 	}
 
 	{
 		bool bValue, bIsNewKey;
-		OTLog::Config_CheckSet_bool("latency","blocking",OTLog::IsBlocking(),bValue,bIsNewKey);
+		p_Config -> CheckSet_bool("latency","blocking",OTLog::IsBlocking(),bValue,bIsNewKey);
 		OTLog::SetBlocking(bValue);
 	}
 
@@ -1079,21 +1258,21 @@ bool OT_API::LoadConfigFile()
 	{
 		bool bIsNewKey;
 		long lValue;
-		OTLog::Config_CheckSet_long("latency","send_delay_after",OTLog::GetLatencyDelayAfter(),lValue,bIsNewKey);
+		p_Config -> CheckSet_long("latency","send_delay_after",OTLog::GetLatencyDelayAfter(),lValue,bIsNewKey);
 		OTLog::SetLatencyDelayAfter(static_cast<int>(lValue));
 	}
 
 	{
 		bool bIsNewKey;
 		long lValue;
-		OTLog::Config_CheckSet_long("latency","send_fail_no_tries",OTLog::GetLatencySendNoTries(),lValue,bIsNewKey);
+		p_Config -> CheckSet_long("latency","send_fail_no_tries",OTLog::GetLatencySendNoTries(),lValue,bIsNewKey);
 		OTLog::SetLatencySendNoTries(static_cast<int>(lValue));
 	}
 
 	{
 		bool bIsNewKey;
 		long lValue;
-		OTLog::Config_CheckSet_long("latency","send_fail_max_ms",OTLog::GetLatencySendMs(),lValue,bIsNewKey);
+		p_Config -> CheckSet_long("latency","send_fail_max_ms",OTLog::GetLatencySendMs(),lValue,bIsNewKey);
 		OTLog::SetLatencySendMs(static_cast<int>(lValue));
 	}
 
@@ -1101,14 +1280,14 @@ bool OT_API::LoadConfigFile()
 	{
 		bool bIsNewKey;
 		long lValue;
-		OTLog::Config_CheckSet_long("latency","recv_fail_no_tries",OTLog::GetLatencyReceiveNoTries(),lValue,bIsNewKey);
+		p_Config -> CheckSet_long("latency","recv_fail_no_tries",OTLog::GetLatencyReceiveNoTries(),lValue,bIsNewKey);
 		OTLog::SetLatencyReceiveNoTries(static_cast<int>(lValue));
 	}
 
 	{
 		bool bIsNewKey;
 		long lValue;
-		OTLog::Config_CheckSet_long("latency","recv_fail_max_ms",OTLog::GetLatencySendMs(),lValue,bIsNewKey);
+		p_Config -> CheckSet_long("latency","recv_fail_max_ms",OTLog::GetLatencySendMs(),lValue,bIsNewKey);
 		OTLog::SetLatencyReceiveMs(static_cast<int>(lValue));
 	}
 
@@ -1123,7 +1302,7 @@ bool OT_API::LoadConfigFile()
 			"; (1oz, 10oz, 100oz, 1000oz.)\n";
 		bool bIsNewKey;
 		long lValue;
-		OTLog::Config_CheckSet_long("markets","minimum_scale",OTLog::GetMinMarketScale(),lValue,bIsNewKey,szComment);
+		p_Config -> CheckSet_long("markets","minimum_scale",OTLog::GetMinMarketScale(),lValue,bIsNewKey,szComment);
 		OTLog::SetMinMarketScale(lValue);
 	}
 
@@ -1141,175 +1320,31 @@ bool OT_API::LoadConfigFile()
 
 		bool bIsNewKey;
 		long lValue;
-	OTLog::Config_CheckSet_long("security","master_key_timeout",CLIENT_MASTER_KEY_TIMEOUT_DEFAULT,lValue,bIsNewKey,szComment);
+	p_Config -> CheckSet_long("security","master_key_timeout",CLIENT_MASTER_KEY_TIMEOUT_DEFAULT,lValue,bIsNewKey,szComment);
 	OTMasterKey::It()->SetTimeoutSeconds(static_cast<int>(lValue));
 	}
 
 	// Use System Keyring
 	{
 	bool bValue, bIsNewKey;
-	OTLog::Config_CheckSet_bool("security","use_system_keyring",CLIENT_USE_SYSTEM_KEYRING,bValue,bIsNewKey);
+	p_Config -> CheckSet_bool("security","use_system_keyring",CLIENT_USE_SYSTEM_KEYRING,bValue,bIsNewKey);
 	OTMasterKey::It()->UseSystemKeyring(bValue);
 	}
 
 
 	// Done Loading... Lets save any changes...
-	rc = OTLog::Config_Save(strConfigFilePath);
-	OT_ASSERT_MSG(rc >=0, "OT_API::LoadConfigFile(): Assert failed: Unable to Save Configuration");
+	if (!p_Config -> Save())
+	{
+		OTLog::vError("%s: Error! Unable to save updated Config!!!\n",szFunc);
+		OT_ASSERT(false);
+	}
 
 	// Finsihed Saving... now lets cleanup!
-	if (!OTLog::Config_Reset()) return false;
+	if (!p_Config -> Reset()) return false;
 
 	return true;
 }
 
-
-// ------------------------------------
-
-// Call this once per run of the software.
-//
-// TODO: add a boolean variable to enforce this, and then
-// just call it from the above function.  Currently this only
-// even works because the below function is empty, and there
-// may be Windows problems in the TCP version for the API builds.
-// (No big deal -- none of them will use TCP anyway...)
-//
-//static
-bool OT_API::InitOTAPI()
-{
-	static int nCount = 0;
-
-	if (0 == nCount)  // skip if already been run.
-	{
-		OT_ASSERT_MSG(0 == nCount, "OT_API::InitOTAPI: ASSERT: This function can only be called once.\n");
-		++nCount;
-		// ------------------------------------
-		OTLog::vOutput(0, "\n\nWelcome to Open Transactions -- version %s\n", 
-			OTLog::Version());
-
-		OTLog::vOutput(1, "(transport build: OTMessage -> OTEnvelope -> ZMQ )\n");
-		// ------------------------------------
-#ifdef _WIN32
-		WSADATA wsaData;
-		WORD wVersionRequested = MAKEWORD( 2, 2 );
-		int err = WSAStartup( wVersionRequested, &wsaData );
-
-		/* Tell the user that we could not find a usable		*/
-		/* Winsock DLL.											*/		
-
-		OT_ASSERT_MSG((err == 0), "WSAStartup failed!\n");
-
-
-		/*	Confirm that the WinSock DLL supports 2.2.			*/
-		/*	Note that if the DLL supports versions greater		*/
-		/*	than 2.2 in addition to 2.2, it will still return	*/
-		/*	2.2 in wVersion since that is the version we		*/
-		/*	requested.											*/
-
-		bool bWinsock = (LOBYTE(wsaData.wVersion) != 2 || HIBYTE(wsaData.wVersion) != 2);
-
-		/* Tell the user that we could not find a usable */
-		/* WinSock DLL.                                  */
-
-		if (!bWinsock) WSACleanup();  // do cleanup.
-		OT_ASSERT_MSG((!bWinsock), "Could not find a usable version of Winsock.dll\n");
-
-		/* The Winsock DLL is acceptable. Proceed to use it. */
-		/* Add network programming using Winsock here */
-		/* then call WSACleanup when done using the Winsock dll */
-		OTLog::vOutput(1,"The Winsock 2.2 dll was found okay\n");
-#endif
-		// ------------------------------------
-		// SIGNALS
-		//
-#if defined(OT_SIGNAL_HANDLING)
-		//
-		OTLog::SetupSignalHandler();  // <===== SIGNALS
-		//
-		// This is optional! You can always remove it using the OT_NO_SIGNAL_HANDLING
-		//  option, and plus, the internals only execute once anyway. (It keeps count.)
-#endif
-		// ------------------------------------
-		OT_API::s_p_ZMQ_Mutex = new tthread::mutex; // This is a new mutex, not a new thread.
-		// ------------------------------------    
-		OTCrypto::It()->Init(); // (OpenSSL gets initialized here.)
-		// ------------------------------------
-		// TODO in the case of Windows, figure err into this return val somehow.
-		// (Or log it or something.)
-		//
-
-		// Setup OTPath:
-		bool bSetupPathsSuccess = OTLog::Path_Setup(CLIENT_CONFIG_KEY);
-		OT_ASSERT_MSG(bSetupPathsSuccess,"OT_API::InitOTAPI: Failed to Setup Paths");
-
-	}
-	return true;
-}
-
-// ------------------------------------
-
-
-//static
-bool OT_API::CleanupOTAPI()
-{
-    OTMasterKey::Cleanup(); // it has a static list of dynamically allocated master keys that need to be cleaned up, if the application is shutting down.
-    // ------------------------------------
-    
-    // We clean these up in reverse order from the Init function, which just seems
-    // like the best default, in absence of any brighter ideas.
-    //
-    OTCrypto::It()->Cleanup();  // (OpenSSL gets cleaned up here.)
-
-    // ------------------------------------
-#ifdef _WIN32
-        WSACleanup(); // Corresponds to WSAStartup() in InitOTAPI().
-#endif
-    // ------------------------------------
-    
-    if (NULL != OT_API::s_p_ZMQ_Mutex)
-        delete OT_API::s_p_ZMQ_Mutex;
-    OT_API::s_p_ZMQ_Mutex = NULL;
-
-    if (NULL != OT_API::s_p_Socket)
-        delete OT_API::s_p_Socket;
-    OT_API::s_p_Socket = NULL;
-
-    // ------------------------------------
-
-    // NOTE: TODO: This shouldn't be here.
-    // Why not? Because InitOTAPI corresponds to CleanupOTAPI.
-    // But the PID init code is in OT_API::Init, NOT InitOTAPI. Therefore
-    // the PID cleanup code should likewise be in OT_API::Cleanup, NOT CleanupOTAPI.
-    // So then why is it here? Because OT_API::Cleanup doesn't exist yet...
-    
-    // Data Path
-    OTString strDataPath;
-    const bool bGetDataFolderSuccess = OTLog::Path_GetDataFolder(strDataPath);
-    OT_ASSERT_MSG(bGetDataFolderSuccess,"OT_API::CleanupOTAPI: Error! Unable to find data path."); 
-	// -------------------------------------------------------
-    // PID -- Set it to 0 in the lock file so the next time we run OT, it knows there isn't
-    // another copy already running (otherwise we might wind up with two copies trying to write
-    // to the same data folder simultaneously, which could corrupt the data...)
-    //
-    OTString strPIDPath;
-    strPIDPath.Format("%s%s%s", strDataPath.Get(), OTLog::PathSeparator(), "ot.pid"); // todo hardcoding.
-    
-    uint32_t the_pid = 0;
-    
-    std::ofstream pid_outfile(strPIDPath.Get());
-    
-    if (pid_outfile.is_open())
-    {
-        pid_outfile << the_pid;
-        pid_outfile.close();
-    }
-    else
-        OTLog::vError("Failed trying to open data locking file (to wipe PID back to 0): %s\n",
-                      strPIDPath.Get());
-    
-    // ------------------------------------
-	return true;   
-}
 
 // ------------------------------------
 
@@ -1344,8 +1379,7 @@ bool OT_API::Init()
 	{
 		bConstruct = true;
 		// ----------------------------
-		m_pWallet = new OTWallet;
-		m_pClient = new OTClient;
+		m_pWallet = shared_ptr<OTWallet>(new OTWallet());
 		// ----------------------------		
 	}
     // --------------------------------------
@@ -1429,12 +1463,12 @@ bool OT_API::Init()
 	{
 		OTLog::vOutput(1, "%s: Success invoking OTDB::InitDefaultStorage", szFunc);
 		
-		if (m_bInitialized) OTLog::vOutput(1, "%s: m_pClient->InitClient() was already initialized. (Skipping.)\n", szFunc);
+		if (m_bInitialized) OTLog::vOutput(1, "%s: m_pClient -> InitClient() was already initialized. (Skipping.)\n", szFunc);
 		else {
-			m_bInitialized = m_pClient->InitClient(*m_pWallet);
+			m_bInitialized = m_pClient -> InitClient(*m_pWallet);
 			// -----------------------------
-			if (m_bInitialized) OTLog::vOutput(1, "%s: Success invoking m_pClient->InitClient() \n", szFunc);
-			else OTLog::vError("%s: Failed invoking m_pClient->InitClient()\n", szFunc);
+			if (m_bInitialized) OTLog::vOutput(1, "%s: Success invoking m_pClient -> InitClient() \n", szFunc);
+			else OTLog::vError("%s: Failed invoking m_pClient -> InitClient()\n", szFunc);
 		}
 		return m_bInitialized;
 	}
@@ -1448,42 +1482,76 @@ bool OT_API::SetWallet(const OTString & strFilename) {
 
 	if (!m_bInitialized) { OTLog::vError("%s: Not initialized; call OT_API::Init first.\n", __FUNCTION__); OT_ASSERT(false); return false; }
 
-	{bool bFilenameExist = strFilename.Exists();
-	 if (bFilenameExist){ OTLog::vError("%s: strFilename dose not exist!\n", __FUNCTION__); OT_ASSERT(false); return false; } }
+	{
+		bool bExists = strFilename.Exists();
+		if (bExists) { OTLog::vError("%s: strFilename dose not exist!\n", __FUNCTION__); OT_ASSERT(false); return false; }
+	}
 
 	OT_ASSERT_MSG(strFilename.Exists(),"OT_API::SetWalletFilename: strFilename does not exist.\n");
 	OT_ASSERT_MSG((3 < strFilename.GetLength()),"OT_API::SetWalletFilename: strFilename is too short.\n");
 
-	
 	// Set New Wallet Filename
 	OTLog::vOutput(0,"%s: Setting Wallet Filename... \n", __FUNCTION__);
 	OTString strWalletFilename; OT_API::GetWalletFilename(strWalletFilename);
+
 	if (strFilename.Compare(strWalletFilename)) 
-    {
+	{
 		OTLog::vOutput(1, "%s: Wallet Filename: %s  is same as in configuration. (skipping)\n",__FUNCTION__,strFilename.Get());
 		return true;
 	}
 	else 
-        strWalletFilename.Set(strWalletFilename);
+		strWalletFilename.Set(strWalletFilename);
 
-	SI_Error rc = SI_FAIL;
+	// Will save updated config filename.
 
-	OTString strConfigFilePath; OTLog::Path_GetConfigFolder(strConfigFilePath);
+	// Setup Config File
+	OTString strConfigFilename;
 
-	// Load Config
-	rc = OTLog::Config_Load(strConfigFilePath);
-	OT_ASSERT_MSG(rc >=0, "OTServer::LoadConfigFile(): Assert failed: Unable to load config file, file unloadable\n");
+	if (!OTLog::GetMainConfigFilename(strConfigFilename)) {
+		OTLog::vError("%s: Error! Unable to get Main Config Filename!\n",__FUNCTION__);
+		return false;
+	};
 
+	// Create Config Object (OTSettings)
+	shared_ptr<OTSettings> p_Config(new OTSettings(strConfigFilename,true));
+
+	// First Load, Create new fresh config file if failed loading.
+	if (!p_Config -> Load())
+	{
+		OTLog::vOutput(0,"%s: Note: Unable to Load Config. Creating a new file: %s\n", __FUNCTION__, strConfigFilename.Get());
+		if (!p_Config -> Reset()) return false;
+		if (!p_Config -> Save()	) return false;
+	}
+
+	if (!p_Config -> Reset()) return false;
+
+	// Second Load, Throw Assert if Failed loading.
+	if (!p_Config -> Load())
+	{
+		OTLog::vError(0,"%s: Error: Unable to load config file: %s It should exist, as we just saved it!\n", __FUNCTION__, strConfigFilename.Get());
+		OT_ASSERT(false);
+	}
+
+
+	// ----------------------------------------------
 	// Set New Wallet Filename
-	bool bNewOrUpdated; 
-	OTLog::Config_Set_str("wallet","wallet_filename",strWalletFilename,bNewOrUpdated,"; Wallet updated\n");
+	{
+		bool bNewOrUpdated; 
+		p_Config -> Set_str("wallet","wallet_filename",strWalletFilename,bNewOrUpdated,"; Wallet updated\n");
 
-	OT_API::SetWalletFilename(strWalletFilename);
+		OT_API::SetWalletFilename(strWalletFilename);
+	}
 
-	// Save Config and cleanup
-	rc = OTLog::Config_Save(strConfigFilePath);
-	OT_ASSERT_MSG(rc >=0, "OTServer::LoadConfigFile(): Assert failed: Unable to save configuration");
-	if (!OTLog::Config_Reset()) return false;
+
+	// Done Loading... Lets save any changes...
+	if (!p_Config -> Save())
+	{
+		OTLog::vError("%s: Error! Unable to save updated Config!!!\n",__FUNCTION__);
+		OT_ASSERT(false);
+	}
+
+	// Finsihed Saving... now lets cleanup!
+	if (!p_Config -> Reset()) return false;
 
 	OTLog::vOutput(0,"%s: Updated Wallet filename: %s \n",__FUNCTION__,strWalletFilename.Get());
 
@@ -1508,12 +1576,12 @@ bool OT_API::LoadWallet()
 	OT_ASSERT_MSG(bGetWalletFilenameSuccess, "OT_API::GetWalletFilename failed, wallet filename isn't set!");
 
 	// Atempt Load
-	OTLog::vOutput(2,"m_pWallet->LoadWallet() with: %s\n", strWalletFilename.Get());
-	bool bSuccess = m_pWallet->LoadWallet(strWalletFilename.Get());
+	OTLog::vOutput(2,"m_pWallet -> LoadWallet() with: %s\n", strWalletFilename.Get());
+	bool bSuccess = m_pWallet -> LoadWallet(strWalletFilename.Get());
 
-	if (bSuccess) OTLog::vOutput(2, "%s: Success invoking m_pWallet->LoadWallet() with filename: %s\n", 
+	if (bSuccess) OTLog::vOutput(2, "%s: Success invoking m_pWallet -> LoadWallet() with filename: %s\n", 
 							   szFunc, strWalletFilename.Get());
-	else OTLog::vError("%s: Failed invoking m_pWallet->LoadWallet() with filename: %s\n", 
+	else OTLog::vError("%s: Failed invoking m_pWallet -> LoadWallet() with filename: %s\n", 
 							  szFunc, strWalletFilename.Get());
 	return bSuccess;
 }
@@ -1526,7 +1594,7 @@ int OT_API::GetNymCount()
 {
 	const char * szFunc = "OT_API::GetNymCount";
 	// -------------------------
-	OTWallet * pWallet = GetWallet(szFunc); // This logs and ASSERTs already.
+	shared_ptr<OTWallet> pWallet = GetWallet(szFunc); // This logs and ASSERTs already.
 	// -------------------------
 	if (NULL != pWallet)
 		return pWallet->GetNymCount();
@@ -1538,7 +1606,7 @@ int OT_API::GetServerCount()
 {
 	const char * szFunc = "OT_API::GetServerCount";
 	// -------------------------
-	OTWallet * pWallet = GetWallet(szFunc); // This logs and ASSERTs already.
+	shared_ptr<OTWallet> pWallet = GetWallet(szFunc); // This logs and ASSERTs already.
 	// -------------------------
 	if (NULL != pWallet)
 		return pWallet->GetServerCount();
@@ -1550,7 +1618,7 @@ int OT_API::GetAssetTypeCount()
 {
 	const char * szFunc = "OT_API::GetAssetTypeCount";
 	// -------------------------
-	OTWallet * pWallet = GetWallet(szFunc); // This logs and ASSERTs already.
+	shared_ptr<OTWallet> pWallet = GetWallet(szFunc); // This logs and ASSERTs already.
 	// -------------------------
 	if (NULL != pWallet)
 		return pWallet->GetAssetTypeCount();
@@ -1562,7 +1630,7 @@ int OT_API::GetAccountCount()
 {
 	const char * szFunc = "OT_API::GetAccountCount";
 	// -------------------------
-	OTWallet * pWallet = GetWallet(szFunc); // This logs and ASSERTs already.
+	shared_ptr<OTWallet> pWallet = GetWallet(szFunc); // This logs and ASSERTs already.
 	// -------------------------
 	if (NULL != pWallet)
 		return pWallet->GetAccountCount();
@@ -1576,7 +1644,7 @@ bool OT_API::GetNym(int iIndex, OTIdentifier & NYM_ID, OTString & NYM_NAME)
 {
 	const char * szFunc = "OT_API::GetNym";
 	// -------------------------
-	OTWallet * pWallet = GetWallet(szFunc); // This logs and ASSERTs already.
+	shared_ptr<OTWallet> pWallet = GetWallet(szFunc); // This logs and ASSERTs already.
 	// -------------------------
 	if (NULL != pWallet)
 		return pWallet->GetNym(iIndex, NYM_ID, NYM_NAME);
@@ -1588,7 +1656,7 @@ bool OT_API::GetServer(int iIndex, OTIdentifier & THE_ID, OTString & THE_NAME)
 {
 	const char * szFunc = "OT_API::GetServer";
 	// -------------------------
-	OTWallet * pWallet = GetWallet(szFunc); // This logs and ASSERTs already.
+	shared_ptr<OTWallet> pWallet = GetWallet(szFunc); // This logs and ASSERTs already.
 	// -------------------------
 	if (NULL != pWallet)
 		return pWallet->GetServer(iIndex, THE_ID, THE_NAME);
@@ -1600,7 +1668,7 @@ bool OT_API::GetAssetType(int iIndex, OTIdentifier & THE_ID, OTString & THE_NAME
 {
 	const char * szFunc = "OT_API::GetAssetType";
 	// -------------------------
-	OTWallet * pWallet = GetWallet(szFunc); // This logs and ASSERTs already.
+	shared_ptr<OTWallet> pWallet = GetWallet(szFunc); // This logs and ASSERTs already.
 	// -------------------------
 	if (NULL != pWallet)
 		return pWallet->GetAssetType(iIndex, THE_ID, THE_NAME);
@@ -1612,7 +1680,7 @@ bool OT_API::GetAccount(int iIndex, OTIdentifier & THE_ID, OTString & THE_NAME)
 {
 	const char * szFunc = "OT_API::GetAccount";
 	// -------------------------
-	OTWallet * pWallet = GetWallet(szFunc); // This logs and ASSERTs already.
+	shared_ptr<OTWallet> pWallet = GetWallet(szFunc); // This logs and ASSERTs already.
 	// -------------------------
 	if (NULL != pWallet)
 		return pWallet->GetAccount(iIndex, THE_ID, THE_NAME);
@@ -1622,20 +1690,28 @@ bool OT_API::GetAccount(int iIndex, OTIdentifier & THE_ID, OTString & THE_NAME)
 
 // *************************************************************************
 
-
-OTWallet * OT_API::GetWallet(const char * szFuncName/*=NULL*/)
+shared_ptr<OTWallet> OT_API::GetWallet(const char * szFuncName)
 {	
 	// Any function that calls GetWallet() thus asserts here.
 	OT_ASSERT_MSG(m_bInitialized, "Not initialized; call OT_API::Init first."); 
 	// --------------------------------------------------------------------
 	const char * szFunc = (NULL != szFuncName) ? szFuncName : "OT_API::GetWallet";
+
+	if (nullptr == m_pWallet)
+		OTLog::vOutput(0, "OT_API::GetWallet %s: -- The Wallet is not loaded.\n", szFunc);
+	return m_pWallet;
+}
+
+const std::unique_ptr<OTClient> & OT_API::GetClient(const char * szFuncName)
+{	
+	// Any function that calls GetWallet() thus asserts here.
+	OT_ASSERT_MSG(m_bInitialized, "Not initialized; call OT_API::Init first."); 
 	// --------------------------------------------------------------------
-	OTWallet * pWallet = m_pWallet; // This is where we "get" the wallet.  :P
-	// --------------------------------------------------------------------
-	if (NULL == pWallet)
-		OTLog::vOutput(0, "OT_API::GetWallet %s: -- The Wallet is not loaded.\n",
-					   szFunc);
-	return pWallet;
+	const char * szFunc = (NULL != szFuncName) ? szFuncName : "OT_API::GetWallet";
+
+	if (nullptr == m_pClient)
+		OTLog::vOutput(0, "OT_API::GetWallet %s: -- The Wallet is not loaded.\n", szFunc);
+	return m_pClient;
 }
 
 // *************************************************************************
@@ -1646,7 +1722,7 @@ OTPseudonym * OT_API::GetNym(const OTIdentifier & NYM_ID, const char * szFuncNam
 	// --------------------------------------------------------------------
 	const char * szFunc = (NULL != szFuncName) ? szFuncName : "OT_API::GetNym";
 	// --------------------------------------------------------------------
-	OTWallet * pWallet = GetWallet(szFunc); // This logs and ASSERTs already.
+	shared_ptr<OTWallet> pWallet = GetWallet(szFunc); // This logs and ASSERTs already.
 	// --------------------------------------------------------------------
 	if (NULL != pWallet)
 	{
@@ -1667,7 +1743,7 @@ OTServerContract * OT_API::GetServer(const OTIdentifier & THE_ID, const char * s
 	// --------------------------------------------------------------------
 	const char * szFunc = (NULL != szFuncName) ? szFuncName : "OT_API::GetServer";
 	// --------------------------------------------------------------------
-	OTWallet * pWallet = GetWallet(szFunc); // This logs and ASSERTs already.
+	shared_ptr<OTWallet> pWallet = GetWallet(szFunc); // This logs and ASSERTs already.
 	// --------------------------------------------------------------------
 	if (NULL != pWallet)
 	{
@@ -1688,7 +1764,7 @@ OTAssetContract * OT_API::GetAssetType(const OTIdentifier & THE_ID, const char *
 	// --------------------------------------------------------------------
 	const char * szFunc = (NULL != szFuncName) ? szFuncName : "OT_API::GetAssetType";
 	// --------------------------------------------------------------------
-	OTWallet * pWallet = GetWallet(szFunc); // This logs and ASSERTs already.
+	shared_ptr<OTWallet> pWallet = GetWallet(szFunc); // This logs and ASSERTs already.
 	// --------------------------------------------------------------------
 	if (NULL != pWallet)
 	{
@@ -1709,7 +1785,7 @@ OTAccount * OT_API::GetAccount(const OTIdentifier & THE_ID, const char * szFuncN
 	// --------------------------------------------------------------------
 	const char * szFunc = (NULL != szFuncName) ? szFuncName : "OT_API::GetAccount";
 	// --------------------------------------------------------------------
-	OTWallet * pWallet = GetWallet(szFunc); // This logs and ASSERTs already.
+	shared_ptr<OTWallet> pWallet = GetWallet(szFunc); // This logs and ASSERTs already.
 	// --------------------------------------------------------------------
 	if (NULL != pWallet)
 	{
@@ -1729,12 +1805,12 @@ OTAccount * OT_API::GetAccount(const OTIdentifier & THE_ID, const char * szFuncN
 
 
 
-OTPseudonym * OT_API::GetNymByIDPartialMatch(const std::string PARTIAL_ID, const char * szFuncName/*=NULL*/)
+OTPseudonym * OT_API::GetNymByIDPartialMatch(const string PARTIAL_ID, const char * szFuncName/*=NULL*/)
 {
 	// --------------------------------------------------------------------
 	const char * szFunc = (NULL != szFuncName) ? szFuncName : "OT_API::GetNymByIDPartialMatch";
 	// --------------------------------------------------------------------
-	OTWallet * pWallet = GetWallet(szFunc); // This logs and ASSERTs already.
+	shared_ptr<OTWallet> pWallet = GetWallet(szFunc); // This logs and ASSERTs already.
 	// --------------------------------------------------------------------
 	if (NULL != pWallet)
 		return pWallet->GetNymByIDPartialMatch(PARTIAL_ID);
@@ -1742,12 +1818,12 @@ OTPseudonym * OT_API::GetNymByIDPartialMatch(const std::string PARTIAL_ID, const
 	return NULL;
 }
 
-OTServerContract * OT_API::GetServerContractPartialMatch(const std::string PARTIAL_ID, const char * szFuncName/*=NULL*/)
+OTServerContract * OT_API::GetServerContractPartialMatch(const string PARTIAL_ID, const char * szFuncName/*=NULL*/)
 {
 	// --------------------------------------------------------------------
 	const char * szFunc = (NULL != szFuncName) ? szFuncName : "OT_API::GetServerContractPartialMatch";
 	// --------------------------------------------------------------------
-	OTWallet * pWallet = GetWallet(szFunc); // This logs and ASSERTs already.
+	shared_ptr<OTWallet> pWallet = GetWallet(szFunc); // This logs and ASSERTs already.
 	// --------------------------------------------------------------------
 	if (NULL != pWallet)
 		return pWallet->GetServerContractPartialMatch(PARTIAL_ID);
@@ -1755,12 +1831,12 @@ OTServerContract * OT_API::GetServerContractPartialMatch(const std::string PARTI
 	return NULL;   
 }
 
-OTAssetContract * OT_API::GetAssetContractPartialMatch(const std::string PARTIAL_ID, const char * szFuncName/*=NULL*/)
+OTAssetContract * OT_API::GetAssetContractPartialMatch(const string PARTIAL_ID, const char * szFuncName/*=NULL*/)
 {
 	// --------------------------------------------------------------------
 	const char * szFunc = (NULL != szFuncName) ? szFuncName : "OT_API::GetAssetContractPartialMatch";
 	// --------------------------------------------------------------------
-	OTWallet * pWallet = GetWallet(szFunc); // This logs and ASSERTs already.
+	shared_ptr<OTWallet> pWallet = GetWallet(szFunc); // This logs and ASSERTs already.
 	// --------------------------------------------------------------------
 	if (NULL != pWallet)
 		return pWallet->GetAssetContractPartialMatch(PARTIAL_ID);
@@ -1768,12 +1844,12 @@ OTAssetContract * OT_API::GetAssetContractPartialMatch(const std::string PARTIAL
 	return NULL; 
 }
 
-OTAccount * OT_API::GetAccountPartialMatch(const std::string PARTIAL_ID, const char * szFuncName/*=NULL*/)
+OTAccount * OT_API::GetAccountPartialMatch(const string PARTIAL_ID, const char * szFuncName/*=NULL*/)
 {
 	// --------------------------------------------------------------------
 	const char * szFunc = (NULL != szFuncName) ? szFuncName : "OT_API::GetAccountPartialMatch";
 	// --------------------------------------------------------------------
-	OTWallet * pWallet = GetWallet(szFunc); // This logs and ASSERTs already.
+	shared_ptr<OTWallet> pWallet = GetWallet(szFunc); // This logs and ASSERTs already.
 	// --------------------------------------------------------------------
 	if (NULL != pWallet)	
 		return pWallet->GetAccountPartialMatch(PARTIAL_ID);
@@ -1808,7 +1884,7 @@ OTPseudonym * OT_API::CreateNym(int nKeySize/*=1024*/)
             return NULL;
     }
     // ---------------------------    
-	OTWallet * pWallet = this->GetWallet(szFuncName); // This logs and ASSERTs already.
+	shared_ptr<OTWallet> pWallet = this->GetWallet(szFuncName); // This logs and ASSERTs already.
 	if (NULL == pWallet) return NULL;
 	// By this point, pWallet is a good pointer.  (No need to cleanup.)
 	// -----------------------------------------------------
@@ -1856,7 +1932,7 @@ bool OT_API::SetAssetType_Name(const OTIdentifier	&	ASSET_ID,
 {
 	const char * szFuncName = __FUNCTION__; //"OT_API::SetAssetType_Name";
 	// -----------------------------------------------------
-	OTWallet * pWallet = this->GetWallet(szFuncName); // This logs and ASSERTs already.
+	shared_ptr<OTWallet> pWallet = this->GetWallet(szFuncName); // This logs and ASSERTs already.
 	if (NULL == pWallet) return false;
 	// By this point, pWallet is a good pointer.  (No need to cleanup.)
 	// -----------------------------------------------------
@@ -1887,7 +1963,7 @@ bool OT_API::SetServer_Name(const OTIdentifier	&	SERVER_ID,
 {
 	const char * szFuncName = "OT_API::SetServer_Name";
 	// -----------------------------------------------------
-	OTWallet * pWallet = this->GetWallet(szFuncName); // This logs and ASSERTs already.
+	shared_ptr<OTWallet> pWallet = this->GetWallet(szFuncName); // This logs and ASSERTs already.
 	if (NULL == pWallet) return false;
 	// By this point, pWallet is a good pointer.  (No need to cleanup.)
 	// -----------------------------------------------------
@@ -1945,13 +2021,13 @@ bool OT_API::IsNym_RegisteredAtServer(const OTIdentifier & NYM_ID, const OTIdent
 const bool OT_API::Wallet_ChangePassphrase()
 {
     // -----------------------------------------------------
-	bool bInitialized = OTAPI_Wrap::OTAPI()->IsInitialized();
+	bool bInitialized = IsInitialized();
 	if (!bInitialized) { OTLog::vError("%s: Not initialized; call OT_API::Init first.\n",__FUNCTION__);	OT_ASSERT(false); }
 
 
     // -----------------------------------------------------
-	OTWallet * pWallet = OTAPI_Wrap::OTAPI()->GetWallet(__FUNCTION__); // This logs and ASSERTs already.
-	if (NULL == pWallet) return false;
+	const shared_ptr<OTWallet> pWallet = GetWallet(__FUNCTION__); // This logs and ASSERTs already.
+	if (nullptr == pWallet) return false;
 	// By this point, pWallet is a good pointer.  (No need to cleanup.)
 	// -----------------------------------------------------
     // Loop through all the private Nyms and get them all loaded up into a list.
@@ -2067,26 +2143,25 @@ const bool OT_API::Wallet_ChangePassphrase()
 }
 
 
-
 const bool OT_API::Wallet_CanRemoveServer(const OTIdentifier & SERVER_ID)
 {
-    // -----------------------------------------------------
-	bool bInitialized = OTAPI_Wrap::OTAPI()->IsInitialized();
+	// -----------------------------------------------------
+	bool bInitialized = IsInitialized();
 	if (!bInitialized) { OTLog::vError("%s: Not initialized; call OT_API::Init first.\n",__FUNCTION__);	OT_ASSERT(false); }
 
 	if (SERVER_ID.IsEmpty())			{ OTLog::vError("%s: Null: %s passed in!\n", __FUNCTION__, "SERVER_ID"			); OT_ASSERT(false); }
-    // -----------------------------------------------------
+	// -----------------------------------------------------
 	OTString strName;
 	// ------------------------------------------
-	const int nCount = OTAPI_Wrap::OTAPI()->GetAccountCount();
-	
+	const int nCount = GetAccountCount();
+
 	// Loop through all the accounts.
 	for (int i = 0; i < nCount; i++)
 	{
 		OTIdentifier accountID;
 
-		OTAPI_Wrap::OTAPI()->GetAccount(i,accountID,strName);
-		OTAccount * pAccount = OTAPI_Wrap::OTAPI()->GetAccount(accountID,__FUNCTION__);
+		GetAccount(i,accountID,strName);
+		OTAccount * pAccount = GetAccount(accountID,__FUNCTION__);
 
 		OTIdentifier purportedServerID(pAccount->GetPurportedServerID());
 
@@ -2098,65 +2173,67 @@ const bool OT_API::Wallet_CanRemoveServer(const OTIdentifier & SERVER_ID)
 		}
 	}
 
-    // ------------------------------------------
-	const int nNymCount = OTAPI_Wrap::OTAPI()->GetNymCount();
-    
-    // Loop through all the Nyms. (One might be registered on that server.)
-    //
-    for (int i = 0; i < nNymCount; i++)
-    {
-		OTIdentifier nymID;
-		bool bGetNym = OTAPI_Wrap::OTAPI()->GetNym(i, nymID, strName);
+	// ------------------------------------------
+	const int nNymCount = GetNymCount();
 
-		if (OTAPI_Wrap::OTAPI()->IsNym_RegisteredAtServer(nymID, SERVER_ID))
+	// Loop through all the Nyms. (One might be registered on that server.)
+	//
+	for (int i = 0; i < nNymCount; i++)
+	{
+		OTIdentifier nymID;
+		bool bGetNym = GetNym(i, nymID, strName);
+
+		if (IsNym_RegisteredAtServer(nymID, SERVER_ID))
 		{
 			OTString strNymID(nymID), strSERVER_ID(SERVER_ID);
-            OTLog::vOutput(0, "%s: Unable to remove server contract %s from wallet, because Nym %s is registered there. (Delete that first...)\n",
+			OTLog::vOutput(0, "%s: Unable to remove server contract %s from wallet, because Nym %s is registered there. (Delete that first...)\n",
 				__FUNCTION__, strSERVER_ID.Get(), strNymID.Get());
 			return false;
 		}
-   }
+	}
 	return true;
 }
 
-	// Can I remove this asset contract from my wallet?
-	//
-	// You cannot remove the asset contract from your wallet if there are accounts in there using it.
-	// This function tells you whether you can remove the asset contract or not.(Whether there are accounts...)
-	//
+
+// Can I remove this asset contract from my wallet?
+//
+// You cannot remove the asset contract from your wallet if there are accounts in there using it.
+// This function tells you whether you can remove the asset contract or not.(Whether there are accounts...)
+//
 const bool OT_API::Wallet_CanRemoveAssetType(const OTIdentifier & ASSET_ID)
 {
-    // -----------------------------------------------------
-	bool bInitialized = OTAPI_Wrap::OTAPI()->IsInitialized();
+	// -----------------------------------------------------
+	bool bInitialized = IsInitialized();
 	if (!bInitialized) { OTLog::vError("%s: Not initialized; call OT_API::Init first.\n",__FUNCTION__);	OT_ASSERT(false); }
 
 	if (ASSET_ID.IsEmpty())			{ OTLog::vError("%s: Null: %s passed in!\n", __FUNCTION__, "ASSET_ID"			); OT_ASSERT(false); }
-    // -----------------------------------------------------
-	
+	// -----------------------------------------------------
+
 	OTString strName;
 	// ------------------------------------------
-	const int nCount = OTAPI_Wrap::OTAPI()->GetAccountCount();
-	
+	const int nCount = GetAccountCount();
+
 	// Loop through all the accounts.
 	for (int i = 0; i < nCount; i++)
 	{
 		OTIdentifier accountID;
 
-		OTAPI_Wrap::OTAPI()->GetAccount(i,accountID,strName);
-		OTAccount * pAccount = OTAPI_Wrap::OTAPI()->GetAccount(accountID,__FUNCTION__);
+		GetAccount(i,accountID,strName);
+		OTAccount * pAccount = GetAccount(accountID,__FUNCTION__);
 		OTIdentifier theTYPE_ID(pAccount->GetAssetTypeID());
 
 		if (ASSET_ID == theTYPE_ID)
-        {
+		{
 			OTString strASSET_ID(ASSET_ID), strTYPE_ID(theTYPE_ID);
 
-            OTLog::vOutput(0, "%s: Unable to remove asset contract %s from wallet: Account %s uses it.\n",
+			OTLog::vOutput(0, "%s: Unable to remove asset contract %s from wallet: Account %s uses it.\n",
 				__FUNCTION__,strASSET_ID.Get(), strTYPE_ID.Get());
 			return false;            
-        }
+		}
 	}
 	return true;	
 }
+
 
 // Can I remove this Nym from my wallet?
 //
@@ -2169,21 +2246,21 @@ const bool OT_API::Wallet_CanRemoveAssetType(const OTIdentifier & ASSET_ID)
 const bool OT_API::Wallet_CanRemoveNym(const OTIdentifier & NYM_ID) 
 {	
     // -----------------------------------------------------
-	bool bInitialized = OTAPI_Wrap::OTAPI()->IsInitialized();
+	bool bInitialized = IsInitialized();
 	if (!bInitialized) { OTLog::vError("%s: Not initialized; call OT_API::Init first.\n",__FUNCTION__);	OT_ASSERT(false); }
 
-	if (NYM_ID.IsEmpty())				{ OTLog::vError("%s: Null: %s passed in!\n", __FUNCTION__, "NYM_ID"				); OT_ASSERT(false); }
+	if (NYM_ID.IsEmpty()) { OTLog::vError("%s: Null: %s passed in!\n", __FUNCTION__, "NYM_ID"				); OT_ASSERT(false); }
     // -----------------------------------------------------
 	
 	
 	// -----------------------------------------------------
-    OTPseudonym * pNym = OTAPI_Wrap::OTAPI()->GetNym(NYM_ID,__FUNCTION__);
+    OTPseudonym * pNym = GetNym(NYM_ID,__FUNCTION__);
     if (NULL == pNym) return false;
 	// ------------------------------------------
 	// Make sure the Nym doesn't have any accounts in the wallet. 
     // (Client must close those before calling this.)
     //
-	const int nCount = OTAPI_Wrap::OTAPI()->GetAccountCount();
+	const int nCount = GetAccountCount();
 	
 	// Loop through all the accounts.
 	for (int i = 0; i < nCount; i++)
@@ -2191,8 +2268,8 @@ const bool OT_API::Wallet_CanRemoveNym(const OTIdentifier & NYM_ID)
 		OTIdentifier accountID;
 		OTString strName;
 
-		OTAPI_Wrap::OTAPI()->GetAccount(i,accountID,strName);
-		OTAccount * pAccount = OTAPI_Wrap::OTAPI()->GetAccount(accountID,__FUNCTION__);
+		GetAccount(i,accountID,strName);
+		OTAccount * pAccount = GetAccount(accountID,__FUNCTION__);
 		OTIdentifier theNYM_ID(pAccount->GetUserID());
 
 		
@@ -2215,13 +2292,13 @@ const bool OT_API::Wallet_CanRemoveNym(const OTIdentifier & NYM_ID)
     // Make sure the Nym isn't registered at any servers...
     // (Client must unregister at those servers before calling this function..)
     //
-    const int nServerCount = OTAPI_Wrap::OTAPI()->GetServerCount();
+    const int nServerCount = GetServerCount();
     
     for (int i = 0; i < nServerCount; i++)
     {
 	OTIdentifier	theID;
 	OTString		strName;
-	bool bGetServer = OTAPI_Wrap::OTAPI()->GetServer(i, theID, strName);
+	bool bGetServer = GetServer(i, theID, strName);
         
 	if (!theID.IsEmpty())
         {
@@ -2242,6 +2319,7 @@ const bool OT_API::Wallet_CanRemoveNym(const OTIdentifier & NYM_ID)
 	return true;	
 }
 
+
 // Can I remove this Account from my wallet?
 //
 // You cannot remove the Account from your wallet if there are transactions still open.
@@ -2253,7 +2331,7 @@ const bool OT_API::Wallet_CanRemoveNym(const OTIdentifier & NYM_ID)
 const bool OT_API::Wallet_CanRemoveAccount(const OTIdentifier & ACCOUNT_ID)
 {
     // -----------------------------------------------------
-	bool bInitialized = OTAPI_Wrap::OTAPI()->IsInitialized();
+	bool bInitialized = IsInitialized();
 	if (!bInitialized) { OTLog::vError("%s: Not initialized; call OT_API::Init first.\n",__FUNCTION__);	OT_ASSERT(false); }
 
 	if (ACCOUNT_ID.IsEmpty())			{ OTLog::vError("%s: Null: %s passed in!\n", __FUNCTION__, "ACCOUNT_ID"			); OT_ASSERT(false); }
@@ -2263,7 +2341,7 @@ const bool OT_API::Wallet_CanRemoveAccount(const OTIdentifier & ACCOUNT_ID)
 	const OTString strAccountID(ACCOUNT_ID);
 
 	// -----------------------------------------------------
-	OTAccount * pAccount = OTAPI_Wrap::OTAPI()->GetAccount(ACCOUNT_ID, __FUNCTION__);
+	OTAccount * pAccount = GetAccount(ACCOUNT_ID, __FUNCTION__);
 	if (NULL == pAccount) return false;
 	// -----------------------------------------------------
 	// Balance must be zero in order to close an account!
@@ -2280,8 +2358,8 @@ const bool OT_API::Wallet_CanRemoveAccount(const OTIdentifier & ACCOUNT_ID)
 
 	// There is an OT_ASSERT in here for memory failure,
 	// but it still might return NULL if various verification fails.
-	OTLedger * pInbox   = OTAPI_Wrap::OTAPI()->LoadInbox(theServerID, theUserID, ACCOUNT_ID); 
-	OTLedger * pOutbox  = OTAPI_Wrap::OTAPI()->LoadOutbox(theServerID, theUserID, ACCOUNT_ID); 
+	OTLedger * pInbox   = LoadInbox(theServerID, theUserID, ACCOUNT_ID); 
+	OTLedger * pOutbox  = LoadOutbox(theServerID, theUserID, ACCOUNT_ID); 
 
 	// Make sure it gets cleaned up pInbox this goes out of scope.
 	OTCleanup<OTLedger>	theInboxAngel(pInbox); // I pass the pointer, in case it's NULL.
@@ -2297,7 +2375,6 @@ const bool OT_API::Wallet_CanRemoveAccount(const OTIdentifier & ACCOUNT_ID)
 		OTLog::vOutput(0, "%s: Failure: You cannot remove an asset account if there are inbox/outbox items still waiting to be processed.\n", __FUNCTION__);
 	}
 	else BOOL_RETURN_VALUE = true; // SUCCESS!
-
 	return BOOL_RETURN_VALUE;
 }
 
@@ -2425,6 +2502,7 @@ const bool OT_API::Wallet_RemoveNym(const OTIdentifier & NYM_ID)
 
 	return false;
 }
+
 
 // --------------------------------------------
 
@@ -2562,8 +2640,8 @@ const bool OT_API::Wallet_ImportNym(const OTString & FILE_CONTENTS, OTIdentifier
 {
     const char * szFunc = "OT_API::Wallet_ImportNym";
 	// -----------------------------------------------------
-	OTWallet * pWallet = GetWallet(szFunc); // This logs and ASSERTs already.
-	if (NULL == pWallet) return false;
+	const shared_ptr<OTWallet> pWallet = GetWallet(szFunc); // This logs and ASSERTs already.
+	if (nullptr == pWallet) return false;
 	// By this point, pWallet is a good pointer.  (No need to cleanup.)
 	// -----------------------------------------------------}
     const bool bBookends = FILE_CONTENTS.Contains("-----BEGIN"); 
@@ -2739,7 +2817,7 @@ const bool OT_API::Wallet_ImportCert(const OTString & DISPLAY_NAME, const OTStri
 {
     const char * szFunc = "OT_API::Wallet_ImportCert";
 	// -----------------------------------------------------
-	OTWallet * pWallet = GetWallet(szFunc); // This logs and ASSERTs already.
+	const shared_ptr<OTWallet> pWallet = GetWallet(szFunc); // This logs and ASSERTs already.
 	if (NULL == pWallet) return false;
 	// By this point, pWallet is a good pointer.  (No need to cleanup.)
 	// -----------------------------------------------------
@@ -3516,7 +3594,7 @@ bool OT_API::SmartContract_AddParty(const	OTString		& THE_CONTRACT,		// The cont
 	else
 		theContractAngel.SetCleanupTarget(*pContract);  // Auto-cleanup.
 	// -----------------------------------------------------
-	const std::string str_party_name(PARTY_NAME.Get()), str_agent_name(AGENT_NAME.Get());
+	const string str_party_name(PARTY_NAME.Get()), str_agent_name(AGENT_NAME.Get());
 	
 	OTParty * pParty = pContract->GetParty(str_party_name);
 	
@@ -3580,7 +3658,7 @@ bool OT_API::SmartContract_AddAccount(const	OTString		& THE_CONTRACT,		// The co
 	else
 		theContractAngel.SetCleanupTarget(*pContract);  // Auto-cleanup.
 	// -----------------------------------------------------
-	const std::string str_party_name(PARTY_NAME.Get());
+	const string str_party_name(PARTY_NAME.Get());
 	
 	OTParty * pParty = pContract->GetParty(str_party_name);
 	
@@ -3590,7 +3668,7 @@ bool OT_API::SmartContract_AddAccount(const	OTString		& THE_CONTRACT,		// The co
 		return false;
 	}
 	// -------------------------------
-	const std::string str_name(ACCT_NAME.Get()), str_asset_id(ASSET_TYPE_ID.Get());
+	const string str_name(ACCT_NAME.Get()), str_asset_id(ASSET_TYPE_ID.Get());
 
 	if (NULL != pParty->GetAccount(str_name))
 	{
@@ -3627,7 +3705,7 @@ int OT_API::SmartContract_CountNumsNeeded(const	OTString	& THE_CONTRACT,		// The
 										  const	OTString	& AGENT_NAME)		// An AGENT will be added by default for this party. Need Agent NAME.
 {
 	int nReturnValue = 0;
-	const std::string	str_agent_name(AGENT_NAME.Get());
+	const string	str_agent_name(AGENT_NAME.Get());
 	// ----------------------------------------------------
 	OTScriptable * pContract = OTScriptable::InstantiateScriptable(THE_CONTRACT);
 	OTCleanup<OTScriptable> theContractAngel;
@@ -3688,7 +3766,7 @@ bool OT_API::SmartContract_ConfirmAccount(const	OTString	& THE_CONTRACT,
 	else
 		theContractAngel.SetCleanupTarget(*pContract);  // Auto-cleanup.
 	// -----------------------------------------------------
-	const std::string str_party_name(PARTY_NAME.Get());
+	const string str_party_name(PARTY_NAME.Get());
 	OTParty * pParty = pContract->GetParty(str_party_name);
 	if (NULL == pParty)
 	{
@@ -3709,7 +3787,7 @@ bool OT_API::SmartContract_ConfirmAccount(const	OTString	& THE_CONTRACT,
 	// ---------------------------------------------
 	// Make sure there's not already an account here with the same ID (Server disallows.)
 	//
-	const std::string str_name(ACCT_NAME.Get());
+	const string str_name(ACCT_NAME.Get());
 
 	OTPartyAccount * pPartyAcct = pParty->GetAccount(str_name);
 	if (NULL == pPartyAcct) // It's not already there. (Though it should be...)
@@ -3792,7 +3870,7 @@ bool OT_API::SmartContract_ConfirmParty(const	OTString	& THE_CONTRACT,	// The sm
 	else
 		theContractAngel.SetCleanupTarget(*pContract);  // Auto-cleanup.
 	// -----------------------------------------------------
-	const std::string str_party_name(PARTY_NAME.Get());
+	const string str_party_name(PARTY_NAME.Get());
 	
 	OTParty * pParty = pContract->GetParty(str_party_name);
 	
@@ -3864,7 +3942,7 @@ bool OT_API::SmartContract_AddBylaw(const	OTString		& THE_CONTRACT,	// The contr
 	else
 		theContractAngel.SetCleanupTarget(*pContract);  // Auto-cleanup.
 	// -----------------------------------------------------
-	const std::string str_bylaw_name(BYLAW_NAME.Get()), str_language(BYLAW_LANGUAGE);
+	const string str_bylaw_name(BYLAW_NAME.Get()), str_language(BYLAW_LANGUAGE);
 	
 	OTBylaw * pBylaw = pContract->GetBylaw(str_bylaw_name);
 
@@ -3929,7 +4007,7 @@ bool OT_API::SmartContract_AddHook(const	OTString		& THE_CONTRACT,	// The contra
 	else
 		theContractAngel.SetCleanupTarget(*pContract);  // Auto-cleanup.
 	// -----------------------------------------------------
-	const std::string str_bylaw_name(BYLAW_NAME.Get());
+	const string str_bylaw_name(BYLAW_NAME.Get());
 		
 	OTBylaw * pBylaw = pContract->GetBylaw(str_bylaw_name);
 	
@@ -3940,7 +4018,7 @@ bool OT_API::SmartContract_AddHook(const	OTString		& THE_CONTRACT,	// The contra
 		return false;
 	}
 	// -------------------------------
-	const std::string	str_name(HOOK_NAME.Get()), str_clause(CLAUSE_NAME.Get());
+	const string	str_name(HOOK_NAME.Get()), str_clause(CLAUSE_NAME.Get());
 	
 	if (false == pBylaw->AddHook(str_name, str_clause))
 	{
@@ -3990,7 +4068,7 @@ bool OT_API::SmartContract_AddCallback(const	OTString		& THE_CONTRACT,	// The co
 	else
 		theContractAngel.SetCleanupTarget(*pContract);  // Auto-cleanup.
 	// -----------------------------------------------------
-	const std::string str_bylaw_name(BYLAW_NAME.Get());
+	const string str_bylaw_name(BYLAW_NAME.Get());
 	
 	OTBylaw * pBylaw = pContract->GetBylaw(str_bylaw_name);
 	
@@ -4001,7 +4079,7 @@ bool OT_API::SmartContract_AddCallback(const	OTString		& THE_CONTRACT,	// The co
 		return false;
 	}
 	// -------------------------------
-	const std::string	str_name(CALLBACK_NAME.Get()), str_clause(CLAUSE_NAME.Get());
+	const string	str_name(CALLBACK_NAME.Get()), str_clause(CLAUSE_NAME.Get());
 	
 	if (NULL != pBylaw->GetCallback(str_name))
 	{
@@ -4060,7 +4138,7 @@ bool OT_API::SmartContract_AddClause(const	OTString		& THE_CONTRACT,	// The cont
 	else
 		theContractAngel.SetCleanupTarget(*pContract);  // Auto-cleanup.
 	// -----------------------------------------------------
-	const std::string str_bylaw_name(BYLAW_NAME.Get());
+	const string str_bylaw_name(BYLAW_NAME.Get());
 	
 	OTBylaw * pBylaw = pContract->GetBylaw(str_bylaw_name);
 	
@@ -4071,7 +4149,7 @@ bool OT_API::SmartContract_AddClause(const	OTString		& THE_CONTRACT,	// The cont
 		return false;
 	}
 	// -------------------------------
-	const std::string str_name(CLAUSE_NAME.Get()), str_code(SOURCE_CODE.Get());
+	const string str_name(CLAUSE_NAME.Get()), str_code(SOURCE_CODE.Get());
 	
 	if (NULL != pBylaw->GetClause(str_name))
 	{
@@ -4132,7 +4210,7 @@ bool OT_API::SmartContract_AddVariable(const	OTString		& THE_CONTRACT,		// The c
 	else
 		theContractAngel.SetCleanupTarget(*pContract);  // Auto-cleanup.
 	// -----------------------------------------------------
-	const std::string str_bylaw_name(BYLAW_NAME.Get());
+	const string str_bylaw_name(BYLAW_NAME.Get());
 	
 	OTBylaw * pBylaw = pContract->GetBylaw(str_bylaw_name);
 	
@@ -4143,7 +4221,7 @@ bool OT_API::SmartContract_AddVariable(const	OTString		& THE_CONTRACT,		// The c
 		return false;
 	}
 	// -------------------------------
-	const std::string	str_name(VAR_NAME.Get()), str_access(VAR_ACCESS.Get()), 
+	const string	str_name(VAR_NAME.Get()), str_access(VAR_ACCESS.Get()), 
 						str_type(VAR_TYPE.Get()), str_value(VAR_VALUE.Get());
 	
 	if (NULL != pBylaw->GetVariable(str_name))
@@ -4242,7 +4320,7 @@ bool OT_API::SetNym_Name(const OTIdentifier	&	NYM_ID,
 {
 	const char * szFuncName = "OT_API::SetNym_Name";
 	// -----------------------------------------------------
-	OTWallet * pWallet = GetWallet(szFuncName); // This logs and ASSERTs already.
+	shared_ptr<OTWallet> pWallet = GetWallet(szFuncName); // This logs and ASSERTs already.
 	if (NULL == pWallet) return false;
 	// By this point, pWallet is a good pointer.  (No need to cleanup.)
 	// -----------------------------------------------------}
@@ -4280,7 +4358,7 @@ bool OT_API::SetAccount_Name(const OTIdentifier &	ACCT_ID,
 {
 	const char * szFuncName = "OT_API::SetAccount_Name";
 	// -----------------------------------------------------
-	OTWallet * pWallet = this->GetWallet(szFuncName);		// This logs and ASSERTs already.
+	shared_ptr<OTWallet> pWallet = this->GetWallet(szFuncName);		// This logs and ASSERTs already.
 	if (NULL == pWallet) return false;
 	// By this point, pWallet is a good pointer.  (No need to cleanup.)
 	// -----------------------------------------------------
@@ -4543,7 +4621,7 @@ bool OT_API::HarvestAllNumbers(const OTIdentifier	& SERVER_ID,
 ///
 OTPseudonym * OT_API::GetOrLoadPublicNym(const OTIdentifier & NYM_ID, const char * szFuncName/*=NULL*/)
 {
-	OTWallet * pWallet = GetWallet(szFuncName); // This logs and ASSERTs already.
+	shared_ptr<OTWallet> pWallet = GetWallet(szFuncName); // This logs and ASSERTs already.
 	if (NULL == pWallet) return NULL;
 	// By this point, pWallet is a good pointer.  (No need to cleanup.)
 	// -----------------------------------------------------	
@@ -4565,7 +4643,7 @@ OTPseudonym * OT_API::GetOrLoadPrivateNym(const OTIdentifier & NYM_ID,
                                           const char * szFuncName/*=NULL*/,
                                           const OTString * pstrReason/*=NULL*/)
 {
-	OTWallet * pWallet = GetWallet(szFuncName); // This logs and ASSERTs already.
+	shared_ptr<OTWallet> pWallet = GetWallet(szFuncName); // This logs and ASSERTs already.
 	if (NULL == pWallet) return NULL;
 	// By this point, pWallet is a good pointer.  (No need to cleanup.)
 	// -----------------------------------------------------
@@ -4588,7 +4666,7 @@ OTPseudonym * OT_API::GetOrLoadNym(const OTIdentifier & NYM_ID,
                                    const char * szFuncName/*=NULL*/,
                                    const OTString * pstrReason/*=NULL*/)
 {
-	OTWallet * pWallet = GetWallet(szFuncName); // This logs and ASSERTs already.
+	shared_ptr<OTWallet> pWallet = GetWallet(szFuncName); // This logs and ASSERTs already.
 	if (NULL == pWallet) return NULL;
 	// By this point, pWallet is a good pointer.  (No need to cleanup.)
 	// -----------------------------------------------------
@@ -4609,7 +4687,7 @@ OTAccount * OT_API::GetOrLoadAccount(		OTPseudonym		& theNym,
 {	
 	const char * szFunc = (NULL != szFuncName) ? szFuncName : "OT_API::GetOrLoadAccount (theNym)";
 	// -----------------------------------------------------
-	OTWallet * pWallet = GetWallet(szFunc); // This logs and ASSERTs already.
+	shared_ptr<OTWallet> pWallet = GetWallet(szFunc); // This logs and ASSERTs already.
 	if (NULL == pWallet) return NULL;
 	// By this point, pWallet is a good pointer.  (No need to cleanup.)
 	// -----------------------------------------------------
@@ -6061,7 +6139,7 @@ OTAccount * OT_API::LoadAssetAccount(const OTIdentifier & SERVER_ID,
 {
 	const char * szFuncName = "OT_API::LoadAssetAccount";
 	// -----------------------------------------------------
-	OTWallet * pWallet = this->GetWallet(szFuncName); // This logs and ASSERTs already.
+	shared_ptr<OTWallet> pWallet = this->GetWallet(szFuncName); // This logs and ASSERTs already.
 	if (NULL == pWallet) return NULL;
 	// By this point, pWallet is a good pointer.  (No need to cleanup.)
 	// -----------------------------------------------------
@@ -6723,25 +6801,25 @@ bool OT_API::ResyncNymWithServer(OTPseudonym & theNym, OTLedger & theNymbox, OTP
 // you receive the pointer that comes back from this function.
 // (It also might return NULL, if there are none there.)
 //
-OTMessage * OT_API::PopMessageBuffer(const long         &   lRequestNumber,
+std::unique_ptr<OTMessage> OT_API::PopMessageBuffer(const long         &   lRequestNumber,
                                      const OTIdentifier &	SERVER_ID,
                                      const OTIdentifier &	USER_ID)
 {
-	OT_ASSERT_MSG( (m_bInitialized && (m_pClient != NULL)) , "Not initialized; call OT_API::Init first.");
+	OT_ASSERT_MSG( (m_bInitialized && (nullptr != m_pClient)) , "Not initialized; call OT_API::Init first.");
 	OT_ASSERT_MSG( lRequestNumber > 0, "OT_API::PopMessageBuffer: lRequestNumber is less than 1.");
     
     const OTString strServerID(SERVER_ID), strNymID(USER_ID);
 
-	return m_pClient->GetMessageBuffer().Pop(lRequestNumber, strServerID, strNymID); // deletes
+	return m_pClient -> GetMessageBuffer().Pop(lRequestNumber, strServerID, strNymID); // deletes
 }
 
 
 
 void OT_API::FlushMessageBuffer()
 {
-	OT_ASSERT_MSG(m_bInitialized && (m_pClient != NULL), "Not initialized; call OT_API::Init first.");
+	OT_ASSERT_MSG(m_bInitialized && (nullptr != m_pClient), "Not initialized; call OT_API::Init first.");
 	
-    m_pClient->GetMessageBuffer().Clear();
+    m_pClient -> GetMessageBuffer().Clear();
 }
 
 
@@ -6761,16 +6839,16 @@ void OT_API::FlushMessageBuffer()
 // Use the "Remove" call if you want to remove it.
 //
 
-OTMessage * OT_API::GetSentMessage(const long         & lRequestNumber,
+shared_ptr<OTMessage> OT_API::GetSentMessage(const long         & lRequestNumber,
                                    const OTIdentifier &	SERVER_ID,
                                    const OTIdentifier &	USER_ID)
 {
-	OT_ASSERT_MSG( (m_bInitialized && (m_pClient != NULL)) , "Not initialized; call OT_API::Init first.");
+	OT_ASSERT_MSG( (m_bInitialized && (nullptr != m_pClient)) , "Not initialized; call OT_API::Init first.");
 	OT_ASSERT_MSG( lRequestNumber > 0, "OT_API::GetSentMessage: lRequestNumber is less than 1.");
     
     const OTString strServerID(SERVER_ID), strNymID(USER_ID);
     
-	return m_pClient->GetMessageOutbuffer().GetSentMessage(lRequestNumber, strServerID, strNymID); // doesn't delete.
+	return m_pClient -> GetMessageOutbuffer().GetSentMessage(lRequestNumber, strServerID, strNymID); // doesn't delete.
 }
 
 
@@ -6778,12 +6856,12 @@ bool OT_API::RemoveSentMessage(const long         & lRequestNumber,
                                const OTIdentifier &	SERVER_ID,
                                const OTIdentifier &	USER_ID)
 {
-	OT_ASSERT_MSG(m_bInitialized && (m_pClient != NULL), "Not initialized; call OT_API::Init first.");
+	OT_ASSERT_MSG(m_bInitialized && (nullptr != m_pClient), "Not initialized; call OT_API::Init first.");
 	OT_ASSERT_MSG(lRequestNumber > 0, "OT_API::RemoveSentMessage: lRequestNumber is less than 1.");
     
     const OTString strServerID(SERVER_ID), strNymID(USER_ID);
     
-	return m_pClient->GetMessageOutbuffer().RemoveSentMessage(lRequestNumber, strServerID, strNymID); // deletes.
+	return m_pClient -> GetMessageOutbuffer().RemoveSentMessage(lRequestNumber, strServerID, strNymID); // deletes.
 }
 
 
@@ -6843,7 +6921,7 @@ void OT_API::FlushSentMessages(const bool bHarvestingForRetry,
                                const OTIdentifier &	USER_ID,
                                      OTLedger     & THE_NYMBOX)
 {
-	OT_ASSERT_MSG(m_bInitialized && (m_pClient != NULL), "Not initialized; call OT_API::Init first.");
+	OT_ASSERT_MSG(m_bInitialized && (nullptr != m_pClient), "Not initialized; call OT_API::Init first.");
     // --------------------------------------------------------------------
 	const char * szFuncName = "OT_API::FlushSentMessages";
 	// -----------------------------------------------------
@@ -6879,14 +6957,14 @@ void OT_API::FlushSentMessages(const bool bHarvestingForRetry,
         
         if (OTTransaction::replyNotice == pTransaction->GetType())
         {
-            OTMessage * pMessage = m_pClient->GetMessageOutbuffer().GetSentMessage(*pTransaction);
+			shared_ptr<OTMessage> pMessage = m_pClient -> GetMessageOutbuffer().GetSentMessage(*pTransaction);
             
             if (NULL != pMessage) // It WAS there in my sent buffer!
             {
                 // Since it IS in my Nymbox already as a replyNotice,
                 // therefore I'm safe to erase it from my sent queue.
                 //
-                m_pClient->GetMessageOutbuffer().RemoveSentMessage(*pTransaction);
+                m_pClient -> GetMessageOutbuffer().RemoveSentMessage(*pTransaction);
             }
             // else do nothing, must have already removed it.
         }
@@ -6907,7 +6985,7 @@ void OT_API::FlushSentMessages(const bool bHarvestingForRetry,
     // he can do his own harvesting, do a re-try, etc and then finally when he is done
     // with that, do the flush.
     //
-    m_pClient->GetMessageOutbuffer().Clear(&strServerID, &strNymID, pNym, &bHarvestingForRetry); // FYI: This HARVESTS any sent messages that need harvesting, before flushing them all.
+    m_pClient -> GetMessageOutbuffer().Clear(&strServerID, &strNymID, pNym, &bHarvestingForRetry); // FYI: This HARVESTS any sent messages that need harvesting, before flushing them all.
 }
 
 // -----------------------------------------------------------------
@@ -6957,7 +7035,7 @@ bool OT_API::ConnectServer(OTIdentifier & SERVER_ID, OTIdentifier	& USER_ID,
 	// contracts. Let's pull the hostname and port out of
 	// the first contract, and connect to that server.
 	
-	OTPseudonym * pNym = m_pWallet->GetNymByID(USER_ID);
+	OTPseudonym * pNym = m_pWallet -> GetNymByID(USER_ID);
 	
 	if (!pNym)
 	{
@@ -6965,7 +7043,7 @@ bool OT_API::ConnectServer(OTIdentifier & SERVER_ID, OTIdentifier	& USER_ID,
 		return false;
 	}
 		
-	bool bConnected = m_pClient->ConnectToTheFirstServerOnList(*pNym, strCA_FILE, strKEY_FILE, strKEY_PASSWORD); 
+	bool bConnected = m_pClient -> ConnectToTheFirstServerOnList(*pNym, strCA_FILE, strKEY_FILE, strKEY_PASSWORD); 
 	
 	if (bConnected)
 	{
@@ -7001,13 +7079,13 @@ bool OT_API::ProcessSockets()
 	
 	do 
 	{
-		OTMessage * pMsg = new OTMessage;
+		const unique_ptr<OTMessage> pMsg(new OTMessage());
 		
 		OT_ASSERT_MSG(NULL != pMsg, "Error allocating memory in the OT API");
 		
 		// If this returns true, that means a Message was
 		// received and processed into an OTMessage object (theMsg)
-		bFoundMessage = m_pClient->ProcessInBuffer(*pMsg);
+		bFoundMessage = m_pClient -> ProcessInBuffer(*pMsg);
 		
 		if (true == bFoundMessage)
 		{
@@ -7017,12 +7095,7 @@ bool OT_API::ProcessSockets()
 			//				theMsg.SaveContract(strReply);
 			//				OTLog::vError("\n\n**********************************************\n"
 			//						"Successfully in-processed server response.\n\n%s\n", strReply.Get());
-			m_pClient->ProcessServerReply(*pMsg); // the Client takes ownership and will handle cleanup.
-		}
-		else 
-		{
-			delete pMsg;
-			pMsg = NULL;
+			m_pClient -> ProcessServerReply(*pMsg); // the Client takes ownership and will handle cleanup.
 		}
 
 		
@@ -7334,13 +7407,14 @@ int OT_API::issueBasket(OTIdentifier	& SERVER_ID,
 	// (3) Save the Message (with signatures and all, back to its internal member m_strRawFile.)
 	theMessage.SaveContract();
 	
+
 	// (Send it)
 #if defined(OT_ZMQ_MODE)
-	m_pClient->SetFocusToServerAndNym(*pServer, *pNym, &OT_API::TransportCallback);
+	m_pClient -> SetFocusToServerAndNym(*pServer, *pNym);
 #endif	
-	m_pClient->ProcessMessageOut(theMessage);
+	m_pClient -> ProcessMessageOut(theMessage);
     
-    return m_pClient->CalcReturnVal(lRequestNumber);
+    return m_pClient -> CalcReturnVal(lRequestNumber);
 }
 
 
@@ -7790,7 +7864,7 @@ int OT_API::exchangeBasket(OTIdentifier	& SERVER_ID,
                     theMessage.m_ascPayload			= ascLedger;
                     
                     OTIdentifier NYMBOX_HASH;
-                    const std::string str_server(strServerID.Get());
+                    const string str_server(strServerID.Get());
                     const bool bNymboxHash = pNym->GetNymboxHash(str_server, NYMBOX_HASH);
                     NYMBOX_HASH.GetString(theMessage.m_strNymboxHash);
                     
@@ -7806,11 +7880,11 @@ int OT_API::exchangeBasket(OTIdentifier	& SERVER_ID,
                     
                     // (Send it)
 #if defined(OT_ZMQ_MODE)
-                    m_pClient->SetFocusToServerAndNym(*pServer, *pNym, &OT_API::TransportCallback);
+                    m_pClient -> SetFocusToServerAndNym(*pServer, *pNym);
 #endif	
-                    m_pClient->ProcessMessageOut(theMessage);
+                    m_pClient -> ProcessMessageOut(theMessage);
                     
-                    return m_pClient->CalcReturnVal(lRequestNumber);
+                    return m_pClient -> CalcReturnVal(lRequestNumber);
                 } // Inbox loaded.
             } // successfully got first transaction number.
         }
@@ -7854,15 +7928,15 @@ int OT_API::getTransactionNumber(OTIdentifier & SERVER_ID,
 	// -----------------------------------------------------
 	OTMessage theMessage;
 
-	int nReturnValue = m_pClient->ProcessUserCommand(OTClient::getTransactionNum, theMessage, 
+	int nReturnValue = m_pClient -> ProcessUserCommand(OTClient::getTransactionNum, theMessage, 
                                                      *pNym, *pServer,
                                                      NULL); // NULL pAccount on this command.
 	if (0 < nReturnValue) 
 	{				
 #if defined(OT_ZMQ_MODE)
-		m_pClient->SetFocusToServerAndNym(*pServer, *pNym, &OT_API::TransportCallback);
+		m_pClient -> SetFocusToServerAndNym(*pServer, *pNym);
 #endif	
-		m_pClient->ProcessMessageOut(theMessage);
+		m_pClient -> ProcessMessageOut(theMessage);
         
         return nReturnValue;
 	}
@@ -7884,7 +7958,7 @@ int OT_API::notarizeWithdrawal(OTIdentifier	& SERVER_ID,
 {
 	const char * szFuncName = "OT_API::notarizeWithdrawal";
 	// -----------------------------------------------------
-	OTWallet * pWallet = this->GetWallet(szFuncName); // This logs and ASSERTs already.
+	shared_ptr<OTWallet> pWallet = this->GetWallet(szFuncName); // This logs and ASSERTs already.
 	if (NULL == pWallet) return (-1);
 	// -----------------------------------------------------
 	OTPseudonym * pNym = this->GetOrLoadPrivateNym(USER_ID, szFuncName); // These copiously log, and ASSERT.
@@ -8077,7 +8151,7 @@ int OT_API::notarizeWithdrawal(OTIdentifier	& SERVER_ID,
 			theMessage.m_ascPayload			= ascLedger;
 			
             OTIdentifier NYMBOX_HASH;
-            const std::string str_server(strServerID.Get());
+            const string str_server(strServerID.Get());
             const bool bNymboxHash = pNym->GetNymboxHash(str_server, NYMBOX_HASH);
             NYMBOX_HASH.GetString(theMessage.m_strNymboxHash);
             
@@ -8093,11 +8167,11 @@ int OT_API::notarizeWithdrawal(OTIdentifier	& SERVER_ID,
 			
 			// (Send it)
 #if defined(OT_ZMQ_MODE)
-			m_pClient->SetFocusToServerAndNym(*pServer, *pNym, &OT_API::TransportCallback);
+			m_pClient -> SetFocusToServerAndNym(*pServer, *pNym);
 #endif	
-			m_pClient->ProcessMessageOut(theMessage);
+			m_pClient -> ProcessMessageOut(theMessage);
             
-            return m_pClient->CalcReturnVal(lRequestNumber);
+            return m_pClient -> CalcReturnVal(lRequestNumber);
 		}
 		else 
 		{
@@ -8314,7 +8388,7 @@ int OT_API::notarizeDeposit(OTIdentifier	& SERVER_ID,
 			theMessage.m_ascPayload			= ascLedger;
 			
             OTIdentifier NYMBOX_HASH;
-            const std::string str_server(strServerID.Get());
+            const string str_server(strServerID.Get());
             const bool bNymboxHash = pNym->GetNymboxHash(str_server, NYMBOX_HASH);
             NYMBOX_HASH.GetString(theMessage.m_strNymboxHash);
             
@@ -8330,11 +8404,11 @@ int OT_API::notarizeDeposit(OTIdentifier	& SERVER_ID,
 			
 			// (Send it)
 #if defined(OT_ZMQ_MODE)
-			m_pClient->SetFocusToServerAndNym(*pServer, *pNym, &OT_API::TransportCallback);
+			m_pClient -> SetFocusToServerAndNym(*pServer, *pNym);
 #endif	
-			m_pClient->ProcessMessageOut(theMessage);	
+			m_pClient -> ProcessMessageOut(theMessage);	
 			
-            return m_pClient->CalcReturnVal(lRequestNumber);
+            return m_pClient -> CalcReturnVal(lRequestNumber);
             
 		} // bSuccess
 		else 
@@ -8381,7 +8455,7 @@ int OT_API::payDividend(OTIdentifier	& SERVER_ID,
 	if (NULL == pSharesContract) return (-1);
 	// By this point, pSharesContract is a good pointer.  (No need to cleanup.)
 	// -----------------------------------------------------
-	OTWallet * pWallet = GetWallet(szFuncName); // This logs and ASSERTs already.
+	shared_ptr<OTWallet> pWallet = GetWallet(szFuncName); // This logs and ASSERTs already.
 	if (NULL == pWallet) return (-1);
 	// -----------------------------------------------------
     OTAccount * pSharesIssuerAcct = pWallet->GetIssuerAccount(SHARES_ASSET_TYPE_ID);
@@ -8580,7 +8654,7 @@ int OT_API::payDividend(OTIdentifier	& SERVER_ID,
 			theMessage.m_ascPayload			= ascLedger;
 			
             OTIdentifier NYMBOX_HASH;
-            const std::string str_server(strServerID.Get());
+            const string str_server(strServerID.Get());
             const bool bNymboxHash = pNym->GetNymboxHash(str_server, NYMBOX_HASH);
             NYMBOX_HASH.GetString(theMessage.m_strNymboxHash);
             
@@ -8596,11 +8670,11 @@ int OT_API::payDividend(OTIdentifier	& SERVER_ID,
 			
 			// (Send it)
 #if defined(OT_ZMQ_MODE)
-			m_pClient->SetFocusToServerAndNym(*pServer, *pNym, &OT_API::TransportCallback);
+			m_pClient -> SetFocusToServerAndNym(*pServer, *pNym);
 #endif	
-			m_pClient->ProcessMessageOut(theMessage);
+			m_pClient -> ProcessMessageOut(theMessage);
             
-            return m_pClient->CalcReturnVal(lRequestNumber);
+            return m_pClient -> CalcReturnVal(lRequestNumber);
 		}
 	}
 	else 
@@ -8760,7 +8834,7 @@ int OT_API::withdrawVoucher(OTIdentifier	& SERVER_ID,
 			theMessage.m_ascPayload			= ascLedger;
 			
             OTIdentifier NYMBOX_HASH;
-            const std::string str_server(strServerID.Get());
+            const string str_server(strServerID.Get());
             const bool bNymboxHash = pNym->GetNymboxHash(str_server, NYMBOX_HASH);
             NYMBOX_HASH.GetString(theMessage.m_strNymboxHash);
             
@@ -8776,11 +8850,11 @@ int OT_API::withdrawVoucher(OTIdentifier	& SERVER_ID,
 			
 			// (Send it)
 #if defined(OT_ZMQ_MODE)
-			m_pClient->SetFocusToServerAndNym(*pServer, *pNym, &OT_API::TransportCallback);
+			m_pClient -> SetFocusToServerAndNym(*pServer, *pNym);
 #endif	
-			m_pClient->ProcessMessageOut(theMessage);
+			m_pClient -> ProcessMessageOut(theMessage);
             
-            return m_pClient->CalcReturnVal(lRequestNumber);
+            return m_pClient -> CalcReturnVal(lRequestNumber);
 		}
 	}
 	else 
@@ -9001,7 +9075,7 @@ int OT_API::depositCheque(OTIdentifier	& SERVER_ID,
 			theMessage.m_ascPayload			= ascLedger;
 			
             OTIdentifier NYMBOX_HASH;
-            const std::string str_server(strServerID.Get());
+            const string str_server(strServerID.Get());
             const bool bNymboxHash = pNym->GetNymboxHash(str_server, NYMBOX_HASH);
             NYMBOX_HASH.GetString(theMessage.m_strNymboxHash);
             
@@ -9017,11 +9091,11 @@ int OT_API::depositCheque(OTIdentifier	& SERVER_ID,
 			
 			// (Send it)
 #if defined(OT_ZMQ_MODE)
-			m_pClient->SetFocusToServerAndNym(*pServer, *pNym, &OT_API::TransportCallback);
+			m_pClient -> SetFocusToServerAndNym(*pServer, *pNym);
 #endif	
-			m_pClient->ProcessMessageOut(theMessage);
+			m_pClient -> ProcessMessageOut(theMessage);
             
-            return m_pClient->CalcReturnVal(lRequestNumber);
+            return m_pClient -> CalcReturnVal(lRequestNumber);
 		}
 	} // bSuccess
     
@@ -9137,7 +9211,7 @@ int OT_API::depositPaymentPlan(const OTIdentifier	& SERVER_ID,
 		theMessage.m_ascPayload			= ascLedger;
 		
         OTIdentifier NYMBOX_HASH;
-        const std::string str_server(strServerID.Get());
+        const string str_server(strServerID.Get());
         const bool bNymboxHash = pNym->GetNymboxHash(str_server, NYMBOX_HASH);
         NYMBOX_HASH.GetString(theMessage.m_strNymboxHash);
         
@@ -9153,11 +9227,11 @@ int OT_API::depositPaymentPlan(const OTIdentifier	& SERVER_ID,
 		
 		// (Send it)
 #if defined(OT_ZMQ_MODE)
-		m_pClient->SetFocusToServerAndNym(*pServer, *pNym, &OT_API::TransportCallback);
+		m_pClient -> SetFocusToServerAndNym(*pServer, *pNym);
 #endif	
-		m_pClient->ProcessMessageOut(theMessage);	
+		m_pClient -> ProcessMessageOut(theMessage);	
         
-        return m_pClient->CalcReturnVal(lRequestNumber);
+        return m_pClient -> CalcReturnVal(lRequestNumber);
 	} // thePlan.LoadContractFromString()
 	else 
 	{
@@ -9216,7 +9290,7 @@ int OT_API::triggerClause(const OTIdentifier	& SERVER_ID,
 		theMessage.m_ascPayload.SetString(*pStrParam); // <===
 
     OTIdentifier NYMBOX_HASH;
-    const std::string str_server(strServerID.Get());
+    const string str_server(strServerID.Get());
     const bool bNymboxHash = pNym->GetNymboxHash(str_server, NYMBOX_HASH);
     NYMBOX_HASH.GetString(theMessage.m_strNymboxHash);
     
@@ -9232,11 +9306,11 @@ int OT_API::triggerClause(const OTIdentifier	& SERVER_ID,
 	
 	// (Send it)
 #if defined(OT_ZMQ_MODE)
-	m_pClient->SetFocusToServerAndNym(*pServer, *pNym, &OT_API::TransportCallback);
+	m_pClient -> SetFocusToServerAndNym(*pServer, *pNym);
 #endif	
-	m_pClient->ProcessMessageOut(theMessage);
+	m_pClient -> ProcessMessageOut(theMessage);
 	
-    return m_pClient->CalcReturnVal(lRequestNumber);
+    return m_pClient -> CalcReturnVal(lRequestNumber);
 }
 
 
@@ -9353,7 +9427,7 @@ int OT_API::activateSmartContract(const OTIdentifier	& SERVER_ID,
 		//
 		// *************************************************************************************
 
-		const std::string str_agent_name(pAgent->GetName().Get());
+		const string str_agent_name(pAgent->GetName().Get());
 		
 		OTPartyAccount * pAcct = pParty->GetAccountByAgent(str_agent_name);
 
@@ -9490,7 +9564,7 @@ int OT_API::activateSmartContract(const OTIdentifier	& SERVER_ID,
 		theMessage.m_ascPayload			= ascLedger;
 		
         OTIdentifier NYMBOX_HASH;
-        const std::string str_server(strServerID.Get());
+        const string str_server(strServerID.Get());
         const bool bNymboxHash = pNym->GetNymboxHash(str_server, NYMBOX_HASH);
         NYMBOX_HASH.GetString(theMessage.m_strNymboxHash);
         
@@ -9506,11 +9580,11 @@ int OT_API::activateSmartContract(const OTIdentifier	& SERVER_ID,
 		
 		// (Send it)
 #if defined(OT_ZMQ_MODE)
-		m_pClient->SetFocusToServerAndNym(*pServer, *pNym, &OT_API::TransportCallback);
+		m_pClient -> SetFocusToServerAndNym(*pServer, *pNym);
 #endif	
-		m_pClient->ProcessMessageOut(theMessage);
+		m_pClient -> ProcessMessageOut(theMessage);
         
-        return m_pClient->CalcReturnVal(lRequestNumber);
+        return m_pClient -> CalcReturnVal(lRequestNumber);
         
 	} // theContract.LoadContractFromString()
 	else
@@ -9656,7 +9730,7 @@ int OT_API::cancelCronItem(const OTIdentifier & SERVER_ID,
         theMessage.m_ascPayload			= ascLedger;
         
         OTIdentifier NYMBOX_HASH;
-        const std::string str_server(strServerID.Get());
+        const string str_server(strServerID.Get());
         const bool bNymboxHash = pNym->GetNymboxHash(str_server, NYMBOX_HASH);
         NYMBOX_HASH.GetString(theMessage.m_strNymboxHash);
         
@@ -9672,18 +9746,15 @@ int OT_API::cancelCronItem(const OTIdentifier & SERVER_ID,
 			
         // (Send it)
 #if defined(OT_ZMQ_MODE)
-        m_pClient->SetFocusToServerAndNym(*pServer, *pNym, &OT_API::TransportCallback);
+        m_pClient -> SetFocusToServerAndNym(*pServer, *pNym);
 #endif	
-        m_pClient->ProcessMessageOut(theMessage);
+        m_pClient -> ProcessMessageOut(theMessage);
         
-        return m_pClient->CalcReturnVal(lRequestNumber);
+        return m_pClient -> CalcReturnVal(lRequestNumber);
 	} // got transaction number.
     
     return (-1);
 }
-
-
-
 
 
 // ----------------------------------------------------------------
@@ -9902,7 +9973,7 @@ int OT_API::issueMarketOffer(const OTIdentifier	& SERVER_ID,
 			theMessage.m_ascPayload			= ascLedger;
 			
             OTIdentifier NYMBOX_HASH;
-            const std::string str_server(strServerID.Get());
+            const string str_server(strServerID.Get());
             const bool bNymboxHash = pNym->GetNymboxHash(str_server, NYMBOX_HASH);
             NYMBOX_HASH.GetString(theMessage.m_strNymboxHash);
             
@@ -9918,11 +9989,11 @@ int OT_API::issueMarketOffer(const OTIdentifier	& SERVER_ID,
 			
 			// (Send it)
 #if defined(OT_ZMQ_MODE)
-			m_pClient->SetFocusToServerAndNym(*pServer, *pNym, &OT_API::TransportCallback);
+			m_pClient -> SetFocusToServerAndNym(*pServer, *pNym);
 #endif	
-			m_pClient->ProcessMessageOut(theMessage);
+			m_pClient -> ProcessMessageOut(theMessage);
             
-            return m_pClient->CalcReturnVal(lRequestNumber);
+            return m_pClient -> CalcReturnVal(lRequestNumber);
             
 		} // if (bCreateOffer && bIssueTrade)
 		else 
@@ -9989,11 +10060,11 @@ int OT_API::getMarketList(const OTIdentifier & SERVER_ID, const OTIdentifier & U
 	
 	// (Send it)
 #if defined(OT_ZMQ_MODE)
-	m_pClient->SetFocusToServerAndNym(*pServer, *pNym, &OT_API::TransportCallback);
+	m_pClient -> SetFocusToServerAndNym(*pServer, *pNym);
 #endif	
-	m_pClient->ProcessMessageOut(theMessage);
+	m_pClient -> ProcessMessageOut(theMessage);
 	
-    return m_pClient->CalcReturnVal(lRequestNumber);
+    return m_pClient -> CalcReturnVal(lRequestNumber);
 }
 
 
@@ -10048,11 +10119,11 @@ int OT_API::getMarketOffers(const OTIdentifier & SERVER_ID, const OTIdentifier &
 	
 	// (Send it)
 #if defined(OT_ZMQ_MODE)
-	m_pClient->SetFocusToServerAndNym(*pServer, *pNym, &OT_API::TransportCallback);
+	m_pClient -> SetFocusToServerAndNym(*pServer, *pNym);
 #endif	
-	m_pClient->ProcessMessageOut(theMessage);
+	m_pClient -> ProcessMessageOut(theMessage);
     
-    return m_pClient->CalcReturnVal(lRequestNumber);
+    return m_pClient -> CalcReturnVal(lRequestNumber);
 }
 
 ///-------------------------------------------------------
@@ -10107,11 +10178,11 @@ int OT_API::getMarketRecentTrades(const OTIdentifier & SERVER_ID,
 	
 	// (Send it)
 #if defined(OT_ZMQ_MODE)
-	m_pClient->SetFocusToServerAndNym(*pServer, *pNym, &OT_API::TransportCallback);
+	m_pClient -> SetFocusToServerAndNym(*pServer, *pNym);
 #endif	
-	m_pClient->ProcessMessageOut(theMessage);
+	m_pClient -> ProcessMessageOut(theMessage);
     
-    return m_pClient->CalcReturnVal(lRequestNumber);
+    return m_pClient -> CalcReturnVal(lRequestNumber);
 }
 
 
@@ -10163,11 +10234,13 @@ int OT_API::getNym_MarketOffers(const OTIdentifier & SERVER_ID, const OTIdentifi
 	
 	// (Send it)
 #if defined(OT_ZMQ_MODE)
-	m_pClient->SetFocusToServerAndNym(*pServer, *pNym, &OT_API::TransportCallback);
+	m_pClient -> SetFocusToServerAndNym(*pServer, *pNym);
 #endif	
-	m_pClient->ProcessMessageOut(theMessage);
+	m_pClient -> ProcessMessageOut(theMessage);
     
-    return m_pClient->CalcReturnVal(lRequestNumber);
+	
+
+    return m_pClient -> CalcReturnVal(lRequestNumber);
 }
 
 
@@ -10315,7 +10388,7 @@ int OT_API::notarizeTransfer(OTIdentifier	& SERVER_ID,
 			theMessage.m_ascPayload			= ascLedger;
 			
             OTIdentifier NYMBOX_HASH;
-            const std::string str_server(strServerID.Get());
+            const string str_server(strServerID.Get());
             const bool bNymboxHash = pNym->GetNymboxHash(str_server, NYMBOX_HASH);
             NYMBOX_HASH.GetString(theMessage.m_strNymboxHash);
             
@@ -10331,11 +10404,11 @@ int OT_API::notarizeTransfer(OTIdentifier	& SERVER_ID,
 
 			// (Send it)
 	#if defined(OT_ZMQ_MODE)
-			m_pClient->SetFocusToServerAndNym(*pServer, *pNym, &OT_API::TransportCallback);
+			m_pClient -> SetFocusToServerAndNym(*pServer, *pNym);
 	#endif	
-			m_pClient->ProcessMessageOut(theMessage);
+			m_pClient -> ProcessMessageOut(theMessage);
             
-            return m_pClient->CalcReturnVal(lRequestNumber);
+            return m_pClient -> CalcReturnVal(lRequestNumber);
 		}
 	}
 	else 
@@ -10390,11 +10463,11 @@ int OT_API::getNymbox(OTIdentifier & SERVER_ID,
 	
 	// (Send it)
 #if defined(OT_ZMQ_MODE)
-	m_pClient->SetFocusToServerAndNym(*pServer, *pNym, &OT_API::TransportCallback);
+	m_pClient -> SetFocusToServerAndNym(*pServer, *pNym);
 #endif	
-	m_pClient->ProcessMessageOut(theMessage);
+	m_pClient -> ProcessMessageOut(theMessage);
     
-    return m_pClient->CalcReturnVal(lRequestNumber);
+    return m_pClient -> CalcReturnVal(lRequestNumber);
 }
 
 
@@ -10444,11 +10517,11 @@ int OT_API::getInbox(OTIdentifier & SERVER_ID,
 	
 	// (Send it)
 #if defined(OT_ZMQ_MODE)
-	m_pClient->SetFocusToServerAndNym(*pServer, *pNym, &OT_API::TransportCallback);
+	m_pClient -> SetFocusToServerAndNym(*pServer, *pNym);
 #endif	
-	m_pClient->ProcessMessageOut(theMessage);
+	m_pClient -> ProcessMessageOut(theMessage);
 	
-    return m_pClient->CalcReturnVal(lRequestNumber);
+    return m_pClient -> CalcReturnVal(lRequestNumber);
 }
 
 
@@ -10499,11 +10572,11 @@ int OT_API::getOutbox(OTIdentifier & SERVER_ID,
 	
 	// (Send it)
 #if defined(OT_ZMQ_MODE)
-	m_pClient->SetFocusToServerAndNym(*pServer, *pNym, &OT_API::TransportCallback);
+	m_pClient -> SetFocusToServerAndNym(*pServer, *pNym);
 #endif	
-	m_pClient->ProcessMessageOut(theMessage);
+	m_pClient -> ProcessMessageOut(theMessage);
     
-    return m_pClient->CalcReturnVal(lRequestNumber);
+    return m_pClient -> CalcReturnVal(lRequestNumber);
 }
 
 
@@ -10560,7 +10633,7 @@ int OT_API::processNymbox(OTIdentifier	& SERVER_ID,
 			
 			// -----------------
 			if (!bIsEmpty)
-				bSuccess = m_pClient->AcceptEntireNymbox(theNymbox, SERVER_ID, theServer, theNym, theMessage);
+				bSuccess = m_pClient -> AcceptEntireNymbox(theNymbox, SERVER_ID, theServer, theNym, theMessage);
 			// -----------------
 			
 			if (!bSuccess)
@@ -10582,7 +10655,7 @@ int OT_API::processNymbox(OTIdentifier	& SERVER_ID,
 			{
                 OTIdentifier NYMBOX_HASH;
                 const OTString strServerID(SERVER_ID);
-                const std::string str_server(strServerID.Get());
+                const string str_server(strServerID.Get());
                 const bool bNymboxHash = theNym.GetNymboxHash(str_server, NYMBOX_HASH);
                 NYMBOX_HASH.GetString(theMessage.m_strNymboxHash);
                 
@@ -10610,11 +10683,12 @@ int OT_API::processNymbox(OTIdentifier	& SERVER_ID,
         
         
 #if defined(OT_ZMQ_MODE)
-		m_pClient->SetFocusToServerAndNym(*pServer, *pNym, &OT_API::TransportCallback);
+		m_pClient -> SetFocusToServerAndNym(*pServer, *pNym);
 #endif	
-		m_pClient->ProcessMessageOut(theMessage);
-        
-        return nRequestNum;
+
+		m_pClient -> ProcessMessageOut(theMessage);
+		return nRequestNum;
+
 	}
 	// if successful, ..., else if not successful--and wasn't empty--then error.
 	else if (!bIsEmpty)  
@@ -10669,7 +10743,7 @@ int OT_API::processInbox(OTIdentifier	& SERVER_ID,
 	theMessage.m_ascPayload.SetString(ACCT_LEDGER);
 	
     OTIdentifier NYMBOX_HASH;
-    const std::string str_server(strServerID.Get());
+    const string str_server(strServerID.Get());
     const bool bNymboxHash = pNym->GetNymboxHash(str_server, NYMBOX_HASH);
     NYMBOX_HASH.GetString(theMessage.m_strNymboxHash);
     
@@ -10685,11 +10759,11 @@ int OT_API::processInbox(OTIdentifier	& SERVER_ID,
 	
 	// (Send it)
 #if defined(OT_ZMQ_MODE)
-	m_pClient->SetFocusToServerAndNym(*pServer, *pNym, &OT_API::TransportCallback);
+	m_pClient -> SetFocusToServerAndNym(*pServer, *pNym);
 #endif	
-	m_pClient->ProcessMessageOut(theMessage);
+	m_pClient -> ProcessMessageOut(theMessage);
     
-    return m_pClient->CalcReturnVal(lRequestNumber);
+    return m_pClient -> CalcReturnVal(lRequestNumber);
 }
 
 
@@ -10700,7 +10774,7 @@ int OT_API::issueAssetType(OTIdentifier	 &	SERVER_ID,
 {
 	const char * szFuncName = "OT_API::issueAssetType";
 	// -----------------------------------------------------
-	OTWallet * pWallet = this->GetWallet(szFuncName);
+	shared_ptr<OTWallet> pWallet = this->GetWallet(szFuncName);
 	if (NULL == pWallet) return (-1);
 	// -----------------------------------------------------
 	OTPseudonym * pNym = this->GetOrLoadPrivateNym(USER_ID, szFuncName);
@@ -10715,8 +10789,8 @@ int OT_API::issueAssetType(OTIdentifier	 &	SERVER_ID,
 	//	OTLog::vError("OT_API::issueAssetType: About to trim this contract:  **BEGIN:%s***END\n\n",
 //				 THE_CONTRACT.Get());
 	
-	std::string str_Trim(THE_CONTRACT.Get());
-	std::string str_Trim2 = OTString::trim(str_Trim);
+	string str_Trim(THE_CONTRACT.Get());
+	string str_Trim2 = OTString::trim(str_Trim);
 	OTString strTrimContract(str_Trim2.c_str());
 	// -----------------------------------------------------
 	
@@ -10787,11 +10861,11 @@ int OT_API::issueAssetType(OTIdentifier	 &	SERVER_ID,
 		
 		// (Send it)
 #if defined(OT_ZMQ_MODE)
-		m_pClient->SetFocusToServerAndNym(*pServer, *pNym, &OT_API::TransportCallback);
+		m_pClient -> SetFocusToServerAndNym(*pServer, *pNym);
 #endif	
-		m_pClient->ProcessMessageOut(theMessage);
+		m_pClient -> ProcessMessageOut(theMessage);
         
-        return m_pClient->CalcReturnVal(lRequestNumber);
+        return m_pClient -> CalcReturnVal(lRequestNumber);
 	}
     
     return -1;
@@ -10840,11 +10914,11 @@ int OT_API::getContract(OTIdentifier & SERVER_ID,
 	
 	// (Send it)
 #if defined(OT_ZMQ_MODE)
-	m_pClient->SetFocusToServerAndNym(*pServer, *pNym, &OT_API::TransportCallback);
+	m_pClient -> SetFocusToServerAndNym(*pServer, *pNym);
 #endif	
-	m_pClient->ProcessMessageOut(theMessage);
+	m_pClient -> ProcessMessageOut(theMessage);
     
-    return m_pClient->CalcReturnVal(lRequestNumber);
+    return m_pClient -> CalcReturnVal(lRequestNumber);
 }
 
 
@@ -10897,11 +10971,11 @@ int OT_API::getMint(OTIdentifier & SERVER_ID,
 	
 	// (Send it)
 #if defined(OT_ZMQ_MODE)
-	m_pClient->SetFocusToServerAndNym(*pServer, *pNym, &OT_API::TransportCallback);
+	m_pClient -> SetFocusToServerAndNym(*pServer, *pNym);
 #endif	
-	m_pClient->ProcessMessageOut(theMessage);
+	m_pClient -> ProcessMessageOut(theMessage);
     
-    return m_pClient->CalcReturnVal(lRequestNumber);
+    return m_pClient -> CalcReturnVal(lRequestNumber);
 }
 
 
@@ -11025,11 +11099,11 @@ int OT_API::queryAssetTypes(OTIdentifier & SERVER_ID,
 	
 	// (Send it)
 #if defined(OT_ZMQ_MODE)
-	m_pClient->SetFocusToServerAndNym(*pServer, *pNym, &OT_API::TransportCallback);
+	m_pClient -> SetFocusToServerAndNym(*pServer, *pNym);
 #endif	
-	m_pClient->ProcessMessageOut(theMessage);
+	m_pClient -> ProcessMessageOut(theMessage);
     
-    return m_pClient->CalcReturnVal(lRequestNumber);
+    return m_pClient -> CalcReturnVal(lRequestNumber);
 }
 
 
@@ -11079,11 +11153,11 @@ int OT_API::createAssetAccount(OTIdentifier & SERVER_ID,
 	
 	// (Send it)
 #if defined(OT_ZMQ_MODE)
-	m_pClient->SetFocusToServerAndNym(*pServer, *pNym, &OT_API::TransportCallback);
+	m_pClient -> SetFocusToServerAndNym(*pServer, *pNym);
 #endif	
-	m_pClient->ProcessMessageOut(theMessage);
+	m_pClient -> ProcessMessageOut(theMessage);
     
-    return m_pClient->CalcReturnVal(lRequestNumber);
+    return m_pClient -> CalcReturnVal(lRequestNumber);
 }
 
 
@@ -11133,11 +11207,11 @@ int OT_API::deleteAssetAccount(OTIdentifier & SERVER_ID,
 	
 	// (Send it)
 #if defined(OT_ZMQ_MODE)
-	m_pClient->SetFocusToServerAndNym(*pServer, *pNym, &OT_API::TransportCallback);
+	m_pClient -> SetFocusToServerAndNym(*pServer, *pNym);
 #endif	
-	m_pClient->ProcessMessageOut(theMessage);
+	m_pClient -> ProcessMessageOut(theMessage);
     
-    return m_pClient->CalcReturnVal(lRequestNumber);
+    return m_pClient -> CalcReturnVal(lRequestNumber);
 }
 
 
@@ -11218,11 +11292,11 @@ int OT_API::getBoxReceipt(const OTIdentifier & SERVER_ID,
 	
 	// (Send it)
 #if defined(OT_ZMQ_MODE)
-	m_pClient->SetFocusToServerAndNym(*pServer, *pNym, &OT_API::TransportCallback);
+	m_pClient -> SetFocusToServerAndNym(*pServer, *pNym);
 #endif	
-	m_pClient->ProcessMessageOut(theMessage);
+	m_pClient -> ProcessMessageOut(theMessage);
     
-    return m_pClient->CalcReturnVal(lRequestNumber);
+    return m_pClient -> CalcReturnVal(lRequestNumber);
 }
 
 
@@ -11274,11 +11348,11 @@ int OT_API::getAccount(OTIdentifier	& SERVER_ID,
 	
 	// (Send it)
 #if defined(OT_ZMQ_MODE)
-	m_pClient->SetFocusToServerAndNym(*pServer, *pNym, &OT_API::TransportCallback);
+	m_pClient -> SetFocusToServerAndNym(*pServer, *pNym);
 #endif	
-	m_pClient->ProcessMessageOut(theMessage);
+	m_pClient -> ProcessMessageOut(theMessage);
     
-    return m_pClient->CalcReturnVal(lRequestNumber);
+    return m_pClient -> CalcReturnVal(lRequestNumber);
 }
 
 
@@ -11300,15 +11374,15 @@ int OT_API::getRequest(OTIdentifier	& SERVER_ID,
 	// -----------------------------------------------------
 	OTMessage theMessage;
 	
-    int nReturnValue = m_pClient->ProcessUserCommand(OTClient::getRequest, theMessage, 
+    int nReturnValue = m_pClient -> ProcessUserCommand(OTClient::getRequest, theMessage, 
                                                      *pNym, *pServer,
                                                      NULL); // NULL pAccount on this command.
 	if (0 < nReturnValue) 
 	{				
 #if defined(OT_ZMQ_MODE)
-		m_pClient->SetFocusToServerAndNym(*pServer, *pNym, &OT_API::TransportCallback);
+		m_pClient -> SetFocusToServerAndNym(*pServer, *pNym);
 #endif	
-		m_pClient->ProcessMessageOut(theMessage);
+		m_pClient -> ProcessMessageOut(theMessage);
         
         return nReturnValue;
 	}
@@ -11366,11 +11440,11 @@ int OT_API::usageCredits(const OTIdentifier &	SERVER_ID,
 	
 	// (Send it)
 #if defined(OT_ZMQ_MODE)
-	m_pClient->SetFocusToServerAndNym(*pServer, *pNym, &OT_API::TransportCallback);
+	m_pClient -> SetFocusToServerAndNym(*pServer, *pNym);
 #endif	
-	m_pClient->ProcessMessageOut(theMessage);
+	m_pClient -> ProcessMessageOut(theMessage);
     
-    return m_pClient->CalcReturnVal(lRequestNumber);
+    return m_pClient -> CalcReturnVal(lRequestNumber);
 }
 
 
@@ -11415,11 +11489,11 @@ int OT_API::checkUser(OTIdentifier & SERVER_ID,
 	
 	// (Send it)
 #if defined(OT_ZMQ_MODE)
-	m_pClient->SetFocusToServerAndNym(*pServer, *pNym, &OT_API::TransportCallback);
+	m_pClient -> SetFocusToServerAndNym(*pServer, *pNym);
 #endif	
-	m_pClient->ProcessMessageOut(theMessage);
+	m_pClient -> ProcessMessageOut(theMessage);
     
-    return m_pClient->CalcReturnVal(lRequestNumber);
+    return m_pClient -> CalcReturnVal(lRequestNumber);
 }
 
 
@@ -11481,15 +11555,15 @@ int OT_API::sendUserMessage(OTIdentifier	& SERVER_ID,
 #if defined(OT_ZMQ_MODE)
 		// -----------------------------------------------------------------
 		
-		m_pClient->SetFocusToServerAndNym(*pServer, *pNym, &OT_API::TransportCallback);
+		m_pClient -> SetFocusToServerAndNym(*pServer, *pNym);
 #endif	
-		m_pClient->ProcessMessageOut(theMessage);
+		m_pClient -> ProcessMessageOut(theMessage);
 				
 		// ----------------------------------------------
 		// store a copy in the outmail.
 		// (not encrypted, since the Nymfile will be encrypted anyway.
 		//
-		OTMessage * pMessage = new OTMessage;
+		unique_ptr<OTMessage> pMessage(new OTMessage());
 		
 		OT_ASSERT(NULL != pMessage);
 		
@@ -11504,11 +11578,11 @@ int OT_API::sendUserMessage(OTIdentifier	& SERVER_ID,
 		pMessage->SignContract(*pNym);		
 		pMessage->SaveContract();
 		
-		pNym->AddOutmail(*pMessage); // Now the Nym is responsible to delete it. It's in his "outmail".
+		pNym->AddOutmail(std::move(pMessage)); // Now the Nym is responsible to delete it. It's in his "outmail".
 		OTPseudonym * pSignerNym = pNym;
 		pNym->SaveSignedNymfile(*pSignerNym); // commented out temp for testing.
         
-        nReturnValue = m_pClient->CalcReturnVal(lRequestNumber);
+        nReturnValue = m_pClient -> CalcReturnVal(lRequestNumber);
 	}
 	else
 		OTLog::Output(0, "OT_API::sendUserMessage: Failed sealing envelope.\n");
@@ -11580,16 +11654,16 @@ int OT_API::sendUserInstrument(OTIdentifier	& SERVER_ID,
 #if defined(OT_ZMQ_MODE)
 		// -----------------------------------------------------------------
 		
-		m_pClient->SetFocusToServerAndNym(*pServer, *pNym, &OT_API::TransportCallback);
+		m_pClient -> SetFocusToServerAndNym(*pServer, *pNym);
 #endif	
-		m_pClient->ProcessMessageOut(theMessage);
+		m_pClient -> ProcessMessageOut(theMessage);
 		
 		
 		// ----------------------------------------------
 		// store a copy in the outpayments.
 		// (not encrypted, since the Nymfile will be encrypted anyway.
 		//
-		OTMessage * pMessage = new OTMessage;
+		unique_ptr<OTMessage> pMessage(new OTMessage());
 		
 		OT_ASSERT(NULL != pMessage);
 		
@@ -11604,11 +11678,11 @@ int OT_API::sendUserInstrument(OTIdentifier	& SERVER_ID,
 		pMessage->SignContract(*pNym);		
 		pMessage->SaveContract();
 		
-		pNym->AddOutpayments(*pMessage); // Now the Nym is responsible to delete it. It's in his "outpayments".
+		pNym->AddOutpayments(std::move(pMessage)); // Now the Nym is responsible to delete it. It's in his "outpayments".
 		OTPseudonym * pSignerNym = pNym;
 		pNym->SaveSignedNymfile(*pSignerNym);
         
-        nReturnValue = m_pClient->CalcReturnVal(lRequestNumber);
+        nReturnValue = m_pClient -> CalcReturnVal(lRequestNumber);
 	}
 	else
 		OTLog::Output(0, "OT_API::sendUserInstrument: Failed sealing envelope.\n");
@@ -11655,20 +11729,20 @@ int OT_API::createUserAccount(OTIdentifier	& SERVER_ID,
 	// -----------------------------------------------------
 	OTMessage theMessage;
     
-	int nReturnValue = m_pClient->ProcessUserCommand(OTClient::createUserAccount, theMessage, 
+	int nReturnValue = m_pClient -> ProcessUserCommand(OTClient::createUserAccount, theMessage, 
                                                      *pNym, *pServer,
                                                      NULL); // NULL pAccount on this command.
 	if (0 < nReturnValue)
 	{				
 #if defined(OT_ZMQ_MODE)
-		m_pClient->SetFocusToServerAndNym(*pServer, *pNym, &OT_API::TransportCallback);
+		m_pClient -> SetFocusToServerAndNym(*pServer, *pNym);
 #endif	
-		m_pClient->ProcessMessageOut(theMessage);
+		m_pClient -> ProcessMessageOut(theMessage);
         
         return nReturnValue;
 	}
 	else
-		OTLog::Error("OT_API::createUserAccount: Error in m_pClient->ProcessUserCommand() \n");
+		OTLog::Error("OT_API::createUserAccount: Error in m_pClient -> ProcessUserCommand() \n");
     
     return -1;
 }
@@ -11691,15 +11765,15 @@ int OT_API::deleteUserAccount(OTIdentifier	& SERVER_ID,
 	// -----------------------------------------------------
 	OTMessage theMessage;
 	
-    int nReturnValue = m_pClient->ProcessUserCommand(OTClient::deleteUserAccount, theMessage, 
+    int nReturnValue = m_pClient -> ProcessUserCommand(OTClient::deleteUserAccount, theMessage, 
                                                      *pNym, *pServer,
                                                      NULL); // NULL pAccount on this command.
 	if (0 < nReturnValue) 
 	{				
 #if defined(OT_ZMQ_MODE)
-		m_pClient->SetFocusToServerAndNym(*pServer, *pNym, &OT_API::TransportCallback);
+		m_pClient -> SetFocusToServerAndNym(*pServer, *pNym);
 #endif	
-		m_pClient->ProcessMessageOut(theMessage);
+		m_pClient -> ProcessMessageOut(theMessage);
         
         return nReturnValue;
 	}
@@ -11727,15 +11801,15 @@ int OT_API::checkServerID(OTIdentifier	& SERVER_ID,
 	// -----------------------------------------------------
 	OTMessage theMessage;
 	
-    int nReturnValue = m_pClient->ProcessUserCommand(OTClient::checkServerID, theMessage, 
+    int nReturnValue = m_pClient -> ProcessUserCommand(OTClient::checkServerID, theMessage, 
                                                      *pNym, *pServer,
                                                      NULL); // NULL pAccount on this command.
 	if (0 < nReturnValue) 
 	{				
 #if defined(OT_ZMQ_MODE)
-		m_pClient->SetFocusToServerAndNym(*pServer, *pNym, &OT_API::TransportCallback);
+		m_pClient -> SetFocusToServerAndNym(*pServer, *pNym);
 #endif	
-		m_pClient->ProcessMessageOut(theMessage);
+		m_pClient -> ProcessMessageOut(theMessage);
         
         return nReturnValue;
 	}

@@ -175,25 +175,37 @@ yIh+Yp/KBzySU3inzclaAfv102/t5xi1l+GTyWHiwZxlyt5PBVglKWx/Ust9CIvN
 OTAPI_Wrap * OTAPI_Wrap::p_Wrap = NULL;
 
 
-OTAPI_Wrap::OTAPI_Wrap() : p_OTAPI(new OT_API())
+OTAPI_Wrap::OTAPI_Wrap() : p_OTAPI(OT_CTX::It() -> New(&OTAPI_Wrap::TheTransportCallback)), m_bInitialized(false), m_bLoadedWallet(false)
 {
-	OT_API::InitOTAPI();
+
 }
 
-
+//static
+bool OTAPI_Wrap::TheTransportCallback(const OTServerContract & sc, const OTEnvelope & env)
+{
+	return OTAPI_Wrap::OTAPI()->TransportCallback(sc,env);
+}
 
 //static
-OTAPI_Wrap * OTAPI_Wrap::It()
+shared_ptr<OTAPI_Wrap> OTAPI_Wrap::It()
 {
-	if (NULL == OTAPI_Wrap::p_Wrap)
+	static shared_ptr<OTAPI_Wrap> p_Wrap(nullptr);
+
+	if (nullptr == p_Wrap)
 	{
-		OTAPI_Wrap::p_Wrap = new OTAPI_Wrap();
+		p_Wrap = shared_ptr<OTAPI_Wrap>(new OTAPI_Wrap());
+
 	}
-	return OTAPI_Wrap::p_Wrap;
+	return p_Wrap;
+}
+
+OTAPI_Wrap::~OTAPI_Wrap()
+{
+
 }
 
 //static
-OT_API * OTAPI_Wrap::OTAPI()
+const std::unique_ptr<OT_API> & OTAPI_Wrap::OTAPI()
 {
 	return OTAPI_Wrap::It()->p_OTAPI;
 }
@@ -246,7 +258,8 @@ void OTAPI_Wrap::Output(const int32_t & nLogLevel, const std::string & strOutput
 // Ruby, Python, Perl, PHP, etc.)
 bool OTAPI_Wrap::Init()
 {
-	return OTAPI_Wrap::OTAPI()->Init();
+	if (nullptr != OTAPI_Wrap::OTAPI()) return true;
+	else return false;
 }
 
 
@@ -529,7 +542,7 @@ std::string OTAPI_Wrap::CreateServerContract(const std::string & NYM_ID, const s
 	if (strXMLcontents.empty())		{ OTLog::vError("%s: Null: %s passed in!\n", __FUNCTION__, "strXMLcontents"		); OT_ASSERT(false); return ""; }
 	// -----------------------------------------------------
 
-	OTWallet * pWallet = OTAPI_Wrap::OTAPI()->GetWallet(__FUNCTION__); // This logs and ASSERTs already.
+	std::shared_ptr<OTWallet> pWallet = OTAPI_Wrap::OTAPI()->GetWallet(__FUNCTION__); // This logs and ASSERTs already.
 	if (NULL == pWallet) return "";
 	// By this point, pWallet is a good pointer.  (No need to cleanup.)
 	// -----------------------------------------------------
@@ -631,7 +644,7 @@ std::string OTAPI_Wrap::CreateAssetContract (const std::string & NYM_ID, const s
 	if (strXMLcontents.empty())		{ OTLog::vError("%s: Null: %s passed in!\n", __FUNCTION__, "strXMLcontents"		); OT_ASSERT(false); return ""; }
 	// -----------------------------------------------------
 
-	OTWallet * pWallet = OTAPI_Wrap::OTAPI()->GetWallet(__FUNCTION__); // This logs and ASSERTs already.
+	std::shared_ptr<OTWallet> pWallet = OTAPI_Wrap::OTAPI()->GetWallet(__FUNCTION__); // This logs and ASSERTs already.
 	if (NULL == pWallet) return "";
 	// By this point, pWallet is a good pointer.  (No need to cleanup.)
 	// -----------------------------------------------------
@@ -803,7 +816,7 @@ int32_t OTAPI_Wrap::AddServerContract(const std::string & strContract)
 	if (strContract.empty())			{ OTLog::vError("%s: Null: %s passed in!\n", __FUNCTION__, "strContract"			); OT_ASSERT(false); return -1; }
 
 	// -----------------------------------------------------
-	OTWallet * pWallet = OTAPI_Wrap::OTAPI()->GetWallet(__FUNCTION__); // This logs and ASSERTs already.
+	std::shared_ptr<OTWallet> pWallet = OTAPI_Wrap::OTAPI()->GetWallet(__FUNCTION__); // This logs and ASSERTs already.
 	if (NULL == pWallet) return false;
 	// By this point, pWallet is a good pointer.  (No need to cleanup.)
 	// -----------------------------------------------------
@@ -849,7 +862,7 @@ int32_t OTAPI_Wrap::AddAssetContract(const std::string & strContract)
 	if (strContract.empty())			{ OTLog::vError("%s: Null: %s passed in!\n", __FUNCTION__, "strContract"			); OT_ASSERT(false); return -1; }
 
 	// -----------------------------------------------------
-	OTWallet * pWallet = OTAPI_Wrap::OTAPI()->GetWallet(__FUNCTION__); // This logs and ASSERTs already.
+	std::shared_ptr<OTWallet> pWallet = OTAPI_Wrap::OTAPI()->GetWallet(__FUNCTION__); // This logs and ASSERTs already.
 	if (NULL == pWallet) return false;
 	// By this point, pWallet is a good pointer.  (No need to cleanup.)
 	// -----------------------------------------------------
@@ -1006,7 +1019,7 @@ bool	OTAPI_Wrap::Wallet_RemoveServer(const std::string & SERVER_ID)
 	// period of time, presumably those terms are described in the server contract.
 	//
 	// -----------------------------------------------------
-	OTWallet * pWallet = OTAPI_Wrap::OTAPI()->GetWallet(__FUNCTION__);
+	std::shared_ptr<OTWallet> pWallet = OTAPI_Wrap::OTAPI()->GetWallet(__FUNCTION__);
 
 	if (NULL == pWallet) {
 		OTLog::vError("%s:  No wallet found...\n",__FUNCTION__);
@@ -1087,7 +1100,7 @@ bool	OTAPI_Wrap::Wallet_RemoveAssetType(const std::string & ASSET_ID)
 		return false;
 
 	// -----------------------------------------------------
-	OTWallet * pWallet = OTAPI_Wrap::OTAPI()->GetWallet(__FUNCTION__);
+	std::shared_ptr<OTWallet> pWallet = OTAPI_Wrap::OTAPI()->GetWallet(__FUNCTION__);
 
 	if (NULL == pWallet) {
 		OTLog::vError("%s: No wallet found...!\n",__FUNCTION__);
@@ -1219,7 +1232,7 @@ bool	OTAPI_Wrap::Wallet_RemoveNym(const std::string & NYM_ID)
 		return false;
 
 	// -----------------------------------------------------
-	OTWallet * pWallet = OTAPI_Wrap::OTAPI()->GetWallet(__FUNCTION__);
+	std::shared_ptr<OTWallet> pWallet = OTAPI_Wrap::OTAPI()->GetWallet(__FUNCTION__);
 
 	if (NULL == pWallet) {
 		OTLog::vError("%s: No wallet found...!\n",__FUNCTION__);
@@ -1627,7 +1640,7 @@ bool OTAPI_Wrap::Wallet_ChangePassphrase()
 	if (!bIsInitialized) { OTLog::vError("%s: Not initialized; call OT_API::Init first.\n",__FUNCTION__);	OT_ASSERT(false); return ""; }
 
 	// -----------------------------------------------------
-	OTWallet * pWallet = OTAPI_Wrap::OTAPI()->GetWallet(__FUNCTION__); // This logs and ASSERTs already.
+	std::shared_ptr<OTWallet> pWallet = OTAPI_Wrap::OTAPI()->GetWallet(__FUNCTION__); // This logs and ASSERTs already.
 	if (NULL == pWallet) return false;
 	// By this point, pWallet is a good pointer.  (No need to cleanup.)
 	// -----------------------------------------------------
@@ -2018,6 +2031,7 @@ std::string OTAPI_Wrap::GetNym_Stats(const std::string & NYM_ID)
 	OTIdentifier	theNymID(NYM_ID);
 	OTPseudonym * pNym = OTAPI_Wrap::OTAPI()->GetNym(theNymID, __FUNCTION__);
 
+
 	if (NULL != pNym)
 	{
 		OTString strOutput;
@@ -2236,7 +2250,7 @@ std::string OTAPI_Wrap::GetNym_MailContentsByIndex(const std::string & NYM_ID, c
 	OTPseudonym * pNym = OTAPI_Wrap::OTAPI()->GetNym(theNymID, __FUNCTION__);
 	if (NULL == pNym) return "";
 	// -------------------------
-	OTMessage * pMessage = pNym->GetMailByIndex(nIndex);
+	std::shared_ptr<OTMessage> pMessage = pNym->GetMailByIndex(nIndex);
 
 	if (NULL != pMessage)
 	{
@@ -2276,7 +2290,7 @@ std::string OTAPI_Wrap::GetNym_MailSenderIDByIndex(const std::string & NYM_ID, c
 	OTPseudonym * pNym = OTAPI_Wrap::OTAPI()->GetNym(theNymID, __FUNCTION__);
 	if (NULL == pNym) return "";
 	// -------------------------
-	OTMessage * pMessage = pNym->GetMailByIndex(nIndex);
+	std::shared_ptr<OTMessage> pMessage = pNym->GetMailByIndex(nIndex);
 
 	if (NULL != pMessage)
 	{
@@ -2308,7 +2322,7 @@ std::string OTAPI_Wrap::GetNym_MailServerIDByIndex(const std::string & NYM_ID, c
 	OTPseudonym * pNym = OTAPI_Wrap::OTAPI()->GetNym(theNymID, __FUNCTION__);
 	if (NULL == pNym) return "";
 	// -------------------------	
-	OTMessage * pMessage = pNym->GetMailByIndex(nIndex);
+	std::shared_ptr<OTMessage> pMessage = pNym->GetMailByIndex(nIndex);
 
 	if (NULL != pMessage)
 	{
@@ -2385,7 +2399,7 @@ bool OTAPI_Wrap::Nym_VerifyMailByIndex(const std::string & NYM_ID, const int32_t
 	OTPseudonym * pNym = OTAPI_Wrap::OTAPI()->GetNym(theNymID, __FUNCTION__);
 	if (NULL == pNym) return false;
 	// -------------------------	
-	OTMessage * pMessage = pNym->GetMailByIndex(nIndex);
+	std::shared_ptr<OTMessage> pMessage = pNym->GetMailByIndex(nIndex);
 
 	if (NULL != pMessage)
 	{
@@ -2437,7 +2451,7 @@ std::string OTAPI_Wrap::GetNym_OutmailContentsByIndex(const std::string & NYM_ID
 	OTPseudonym * pNym = OTAPI_Wrap::OTAPI()->GetNym(theNymID, __FUNCTION__);
 	if (NULL == pNym) return "";
 	// -------------------------	
-	OTMessage * pMessage = pNym->GetOutmailByIndex(nIndex);
+	std::shared_ptr<OTMessage> pMessage = pNym->GetOutmailByIndex(nIndex);
 	if (NULL != pMessage)
 	{
 		// SENDER:    pMessage->m_strNymID
@@ -2473,7 +2487,7 @@ std::string OTAPI_Wrap::GetNym_OutmailRecipientIDByIndex(const std::string & NYM
 	OTPseudonym * pNym = OTAPI_Wrap::OTAPI()->GetNym(theNymID, __FUNCTION__);
 	if (NULL == pNym) return "";
 	// -------------------------	
-	OTMessage * pMessage = pNym->GetOutmailByIndex(nIndex);
+	std::shared_ptr<OTMessage> pMessage = pNym->GetOutmailByIndex(nIndex);
 	if (NULL != pMessage)
 	{
 		// SENDER:    pMessage->m_strNymID
@@ -2505,7 +2519,7 @@ std::string OTAPI_Wrap::GetNym_OutmailServerIDByIndex(const std::string & NYM_ID
 	OTPseudonym * pNym = OTAPI_Wrap::OTAPI()->GetNym(theNymID, __FUNCTION__);
 	if (NULL == pNym) return "";
 	// -------------------------	
-	OTMessage * pMessage = pNym->GetOutmailByIndex(nIndex);
+	std::shared_ptr<OTMessage> pMessage = pNym->GetOutmailByIndex(nIndex);
 
 	if (NULL != pMessage)
 	{
@@ -2583,7 +2597,7 @@ bool OTAPI_Wrap::Nym_VerifyOutmailByIndex(const std::string & NYM_ID, const int3
 	OTPseudonym * pNym = OTAPI_Wrap::OTAPI()->GetNym(theNymID, __FUNCTION__);
 	if (NULL == pNym) return false;
 	// -------------------------	
-	OTMessage * pMessage = pNym->GetOutmailByIndex(nIndex);
+	std::shared_ptr<OTMessage> pMessage = pNym->GetOutmailByIndex(nIndex);
 	if (NULL != pMessage)
 	{
 		// Grab the NymID of the sender.
@@ -2642,7 +2656,7 @@ std::string OTAPI_Wrap::GetNym_OutpaymentsContentsByIndex(const std::string & NY
 	OTPseudonym * pNym = OTAPI_Wrap::OTAPI()->GetNym(theNymID, __FUNCTION__);
 	if (NULL == pNym) return "";
 	// -------------------------	
-	OTMessage * pMessage = pNym->GetOutpaymentsByIndex(nIndex);
+	std::shared_ptr<OTMessage> pMessage = pNym->GetOutpaymentsByIndex(nIndex);
 	if (NULL != pMessage)
 	{
 		// SENDER:     pMessage->m_strNymID
@@ -2684,7 +2698,7 @@ std::string OTAPI_Wrap::GetNym_OutpaymentsRecipientIDByIndex(const std::string &
 	OTPseudonym * pNym = OTAPI_Wrap::OTAPI()->GetNym(theNymID, __FUNCTION__);
 	if (NULL == pNym) return "";
 	// -------------------------	
-	OTMessage * pMessage = pNym->GetOutpaymentsByIndex(nIndex);
+	std::shared_ptr<OTMessage> pMessage = pNym->GetOutpaymentsByIndex(nIndex);
 	if (NULL != pMessage)
 	{
 		// SENDER:    pMessage->m_strNymID
@@ -2715,7 +2729,7 @@ std::string OTAPI_Wrap::GetNym_OutpaymentsServerIDByIndex(const std::string & NY
 	OTPseudonym * pNym = OTAPI_Wrap::OTAPI()->GetNym(theNymID, __FUNCTION__);
 	if (NULL == pNym) return "";
 	// -------------------------	
-	OTMessage * pMessage = pNym->GetOutpaymentsByIndex(nIndex);
+	std::shared_ptr<OTMessage> pMessage = pNym->GetOutpaymentsByIndex(nIndex);
 
 	if (NULL != pMessage)
 	{
@@ -2797,7 +2811,7 @@ bool OTAPI_Wrap::Nym_VerifyOutpaymentsByIndex(const std::string & NYM_ID, const 
 	OTPseudonym * pNym = OTAPI_Wrap::OTAPI()->GetNym(theNymID, __FUNCTION__);
 	if (NULL == pNym) return false;
 	// -------------------------	
-	OTMessage * pMessage = pNym->GetOutpaymentsByIndex(nIndex);
+	std::shared_ptr<OTMessage> pMessage = pNym->GetOutpaymentsByIndex(nIndex);
 	if (NULL != pMessage)
 	{
 		// Grab the NymID of the sender.
@@ -8729,7 +8743,7 @@ time_t OTAPI_Wrap::Transaction_GetDateSigned(const std::string & SERVER_ID,
 //                           false (0) == rejection 
 // NEW: (-1) for error
 //
-bool OTAPI_Wrap::Transaction_GetSuccess(const std::string & SERVER_ID,
+int32_t OTAPI_Wrap::Transaction_GetSuccess(const std::string & SERVER_ID,
 									 const std::string & USER_ID,
 									 const std::string & ACCOUNT_ID,
 									 const std::string & THE_TRANSACTION)
@@ -8813,7 +8827,7 @@ bool OTAPI_Wrap::Transaction_GetSuccess(const std::string & SERVER_ID,
 //                              false (0) == rejection 
 // NEW: -1 (-1) for error
 //
-bool OTAPI_Wrap::Transaction_GetBalanceAgreementSuccess(const std::string & SERVER_ID,
+int32_t OTAPI_Wrap::Transaction_GetBalanceAgreementSuccess(const std::string & SERVER_ID,
 													 const std::string & USER_ID,
 													 const std::string & ACCOUNT_ID,
 													 const std::string & THE_TRANSACTION)
@@ -11425,8 +11439,7 @@ std::string OTAPI_Wrap::PopMessageBuffer(const int64_t & REQUEST_NUMBER,
 	const OTIdentifier  theServerID(SERVER_ID),
 		theUserID(USER_ID);
 	// ------------------------------------------------
-	OTMessage * pMsg = OTAPI_Wrap::OTAPI()->PopMessageBuffer(static_cast<long>(lRequestNum), theServerID, theUserID); // caller responsible to delete.
-	OTCleanup<OTMessage> theAngel(pMsg);  // Just making sure it gets cleaned up.
+	std::shared_ptr<OTMessage> pMsg = OTAPI_Wrap::OTAPI()->PopMessageBuffer(static_cast<long>(lRequestNum), theServerID, theUserID); // caller responsible to delete.
 
 	if (NULL == pMsg) // The buffer was empty.
 	{
@@ -11436,7 +11449,7 @@ std::string OTAPI_Wrap::PopMessageBuffer(const int64_t & REQUEST_NUMBER,
 
 	const OTString strOutput(*pMsg);
 
-	std::string pBuf = strOutput.Get(); 
+	std::string pBuf = strOutput.Get();
 	return pBuf;		
 }
 
@@ -11488,7 +11501,7 @@ std::string OTAPI_Wrap::GetSentMessage(const int64_t & REQUEST_NUMBER,
 	const OTIdentifier  theServerID(SERVER_ID),
 		theUserID(USER_ID);
 	// ------------------------------------------------
-	OTMessage * pMsg = OTAPI_Wrap::OTAPI()->GetSentMessage(static_cast<long>(lRequestNum), theServerID, theUserID); 
+	std::shared_ptr<OTMessage> pMsg = OTAPI_Wrap::OTAPI()->GetSentMessage(static_cast<long>(lRequestNum), theServerID, theUserID); 
 	//	OTCleanup<OTMessage> theAngel(pMsg);    // caller NOT responsible to delete.
 
 	if (NULL == pMsg) // The message wasn't found with that request number.

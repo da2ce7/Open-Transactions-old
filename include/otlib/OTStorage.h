@@ -153,9 +153,6 @@ yIh+Yp/KBzySU3inzclaAfv102/t5xi1l+GTyWHiwZxlyt5PBVglKWx/Ust9CIvN
 #include <vector>
 #include <map>
 
-// credit:stlplus library.
-#include "containers/simple_ptr.hpp"
-
 // Use Win or Posix
 // IF I need this while porting, then uncomment it.
 #ifdef _WIN32
@@ -795,7 +792,7 @@ namespace OTDB
 
 #define DECLARE_GET_ADD_REMOVE(name) \
 protected: \
-	std::deque< stlplus::simple_ptr_clone<name> > list_##name##s; \
+	std::deque< std::shared_ptr<name> > list_##name##s; \
 public: \
 	EXPORT	size_t Get##name##Count(); \
 	EXPORT	name * Get##name(size_t nIndex); \
