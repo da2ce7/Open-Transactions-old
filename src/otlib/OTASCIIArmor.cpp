@@ -582,11 +582,7 @@ bool OTASCIIArmor::GetAndUnpackString(OTString & strData, bool bLineBreaks) cons
 bool OTASCIIArmor::GetString(OTString & strData, bool bLineBreaks) const //bLineBreaks=true
 {	
 	return GetAndUnpackString(strData, bLineBreaks);
-	//
-	//
-	//
-	//
-	//
+
 	//size_t		outSize	= 0;
 	//uint8_t *	pData	= NULL;
 	//
@@ -857,9 +853,7 @@ bool OTASCIIArmor::SetAndPackStringMap(const std::map<std::string, std::string> 
 bool OTASCIIArmor::GetData(OTData & theData, bool bLineBreaks) const //linebreaks=true
 {	
 	return GetAndUnpackData(theData, bLineBreaks);
-	//
-	//
-	//
+
 	//size_t		outSize	= 0;
 	//uint8_t *	pData	= NULL;
 	//
@@ -951,9 +945,7 @@ bool OTASCIIArmor::GetAndUnpackData(OTData & theData, bool bLineBreaks) const //
 bool OTASCIIArmor::SetData(const OTData & theData, bool bLineBreaks/*=true*/)
 {
 	return SetAndPackData(theData, bLineBreaks);
-	//
-	//
-	//
+
 	//char *	pString	= NULL;
 	//
 	//Release();
@@ -1230,11 +1222,9 @@ bool OTASCIIArmor::SetString(const OTString & strData, bool bLineBreaks) //=true
 	
 	return SetAndPackString(strData, bLineBreaks);
 	
-//	
-//	// ---------------------------------------------------------------
-//	
-////	OTLog::vError("DEBUGGING OTASCIIARMOR::SETSTRING, INPUT:  --------->%s<---------", strData.Get());
-//	
+
+//	OTLog::vError("DEBUGGING OTASCIIARMOR::SETSTRING, INPUT:  --------->%s<---------", strData.Get());
+//
 //	Release();
 //	
 //	if (strData.GetLength() < 1)

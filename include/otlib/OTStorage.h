@@ -153,6 +153,7 @@ yIh+Yp/KBzySU3inzclaAfv102/t5xi1l+GTyWHiwZxlyt5PBVglKWx/Ust9CIvN
 #include <vector>
 #include <map>
 
+
 // Use Win or Posix
 // IF I need this while porting, then uncomment it.
 #ifdef _WIN32
@@ -578,9 +579,20 @@ namespace OTDB
 		OTPacker * m_pPacker;
 
 	protected:
+
 		Storage() : m_pPacker(NULL) {}
 
+		#ifdef _WIN32
+		#pragma warning( push )
+		#pragma warning( disable : 4100 )  // unreferenced formal parameter
+		#endif
+
 		Storage(const Storage & rhs) : m_pPacker(NULL) { } // We don't want to copy the pointer. Let it create its own.
+
+		#ifdef _WIN32
+		#pragma warning( pop )
+		#endif
+
 
 		// This is called once, in the factory.
 		void SetPacker(OTPacker & thePacker) { OT_ASSERT(NULL == m_pPacker); m_pPacker =  &thePacker; }
@@ -893,7 +905,7 @@ public: \
 		// You never actually get an instance of this, only its subclasses.
 		// Therefore, I don't allow you to access the constructor except through factory.
 	protected:
-		MarketData() : Displayable(), 
+				MarketData() : Displayable(), 
 			scale("0"), total_assets("0"), number_bids("0"), last_sale_price("0"),
 			current_bid("0"), current_ask("0"), 
 			volume_trades("0"), volume_assets("0"), volume_currency("0"),
@@ -901,6 +913,8 @@ public: \
 		{ m_Type = "MarketData"; }
 
 	public:
+
+
 		virtual ~MarketData() { }
 
 		using Displayable::gui_label;  // The label that appears in the GUI
@@ -939,6 +953,7 @@ public: \
 	class MarketList : public Storable {
 		// You never actually get an instance of this, only its subclasses.
 		// Therefore, I don't allow you to access the constructor except through factory.
+
 	protected:
 		MarketList() : Storable() { m_Type = "MarketList"; }
 
@@ -1512,8 +1527,10 @@ namespace OTDB
 	// 
 	// This is the first subclass of OTDB::Storage -- but it won't be the last!
 	//
-	class StorageFS : public Storage 
+	class StorageFS : public Storage
 	{
+	private:
+		std::string m_strDataPath;
 
 	protected:
 		StorageFS();// You have to use the factory to instantiate (so it can create the Packer also.)
@@ -2076,6 +2093,7 @@ namespace OTDB
 #pragma warning( push )
 #pragma warning( disable : 4244 )
 #pragma warning( disable : 4267 )
+#pragma warning( disable : 4512 )
 #endif
 
 #include "Generics.pb.h"

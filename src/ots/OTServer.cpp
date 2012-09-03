@@ -152,10 +152,7 @@
  Library                     -- Kernel32.lib
  DLL                         -- Kernel32.dll
  */
-//#ifdef _WIN32
-//#include <WinsockWrapper.h>
-//#endif
-//#include <windows.h>
+#include <WinsockWrapper.h>  // we use the winsock wrapper instead.
 // DWORD GetCurrentProcessId(void);
 #else
 // getpid
@@ -171,7 +168,6 @@
 
 using namespace irr;
 using namespace io;
-using namespace std;
 
 #define SERVER_CONFIG_KEY "server"
 #define SERVER_DATA_DIR "server_data"
@@ -258,6 +254,9 @@ int OTCron::__cron_max_items_per_nym    = 10; // The maximum number of cron item
 
 // These are default values. There are configurable in ~/.ot/server.cfg
 // (static)
+
+
+long OTServer::__min_market_scale = 1;
 
 int OTServer::__heartbeat_no_requests = 10; // The number of client requests that will be processed per heartbeat.
 int OTServer::__heartbeat_ms_between_beats = 100; // number of ms between each heartbeat.
@@ -575,7 +574,7 @@ OTMint * OTServer::GetMint(const OTIdentifier & ASSET_TYPE_ID, int nSeries) // E
 						   m_strServerID.Get(), OTLog::PathSeparator(), 
 						   ASSET_ID_STR.Get(), ".", nSeries);
 	
-	const char * szFoldername	= OTLog::MintFolder();
+	const char * szFoldername	= OTFolders::Mint().Get();
 	const char * szFilename		= strMintFilename.Get();
 	
 	// --------------------------------------------------------------------
@@ -599,7 +598,7 @@ OTMint * OTServer::GetMint(const OTIdentifier & ASSET_TYPE_ID, int nSeries) // E
 			// It's a multimap now...
 			//m_mapMints[ASSET_ID_STR.Get()] = pMint;
 
-			m_mapMints.insert ( pair<std::string, OTMint *>(ASSET_ID_STR.Get(), pMint) );
+			m_mapMints.insert ( std::pair<std::string, OTMint *>(ASSET_ID_STR.Get(), pMint) );
 			
 			return pMint;
 		}
@@ -993,9 +992,6 @@ bool OTServer::SaveMainFile()
 
 
 
-// TODO: da2ce7 put a bunch of hardcoded numbers in here. These need to be changed
-// to use preprocessor defines.
-//
 bool OTServer::LoadConfigFile()
 {	
 	const char * szFunc = "OTServer::LoadConfigFile()";
@@ -1003,18 +999,10 @@ bool OTServer::LoadConfigFile()
 	// Setup Config File
 	OTString strConfigFolder, strConfigFilename;
 
-	if (!OTLog::Path_GetConfigFolder(strConfigFolder)) {
-		OTLog::vError("%s: Error! Unable to get Config Folder!\n",szFunc);
-		return false;
-	};
-
-	if (!OTLog::GetMainConfigFilename(strConfigFilename)) {
-		OTLog::vError("%s: Error! Unable to get Main Config Filename!\n",szFunc);
-		return false;
-	};
+	if (!OTDataFolder::IsInitialized()) { OT_ASSERT(false); };
 
 	// Create Config Object (OTSettings)
-	unique_ptr<OTSettings> p_Config(new OTSettings(strConfigFilename,true));
+	const std::unique_ptr<OTSettings> p_Config(new OTSettings(OTDataFolder::GetConfigFilePath()));
 
 	// First Load, Create new fresh config file if failed loading.
 	if (!p_Config -> Load())
@@ -1023,7 +1011,6 @@ bool OTServer::LoadConfigFile()
 		if (!p_Config -> Reset()) return false;
 		if (!p_Config -> Save()	) return false;
 	}
-
 
 	if (!p_Config -> Reset()) return false;
 
@@ -1039,14 +1026,14 @@ bool OTServer::LoadConfigFile()
 	// ---------------------------------------------
 	// LOGGING
 
-	// LOG FILE
-	{
-		bool bIsNewKey;
-		OTString strValue, strFullPath;
-		p_Config -> CheckSet_str("logging","log_filename",SERVER_LOGFILE_FILENAME,strValue,bIsNewKey);
-		if (!OTLog::Path_RelativeToCanonical(strFullPath,strConfigFolder,strValue)) return false;
-		OTLog::SetLogfile(strFullPath.Get());
-	}
+	//// LOG FILE
+	//{
+	//	bool bIsNewKey;
+	//	OTString strValue, strFullPath;
+	//	p_Config -> CheckSet_str("logging","log_filename",SERVER_LOGFILE_FILENAME,strValue,bIsNewKey);
+	//	if (!OTPaths::RelativeToCanonical(strFullPath,strConfigFolder,strValue)) return false;
+	//	OTLog::SetLogfile(strFullPath.Get());
+	//}
 
 	// ---------------------------------------------
 	// LOG LEVEL
@@ -1057,34 +1044,33 @@ bool OTServer::LoadConfigFile()
 		OTLog::SetLogLevel(static_cast<int> (lValue));
 	}
 
-	// ---------------------------------------------
-	// DATA DIRECTORY
-	{
-		bool bNameKeyExist, bIsRelativeKeyExist, bIsRelative, bFolderExist;
-		OTString strValue, strFullPath;
-		p_Config -> Check_str("data","directory_name",strValue,bNameKeyExist);
-		p_Config -> Check_bool("data","directory_is_relative",bIsRelative,bIsRelativeKeyExist);
+	//// ---------------------------------------------
+	//// DATA DIRECTORY
+	//{
+	//	bool bNameKeyExist, bIsRelativeKeyExist, bIsRelative, bFolderExist;
+	//	OTString strValue, strFullPath;
+	//	p_Config -> Check_str("data","directory_name",strValue,bNameKeyExist);
+	//	p_Config -> Check_bool("data","directory_is_relative",bIsRelative,bIsRelativeKeyExist);
 
-		if (!bNameKeyExist || !bIsRelativeKeyExist)
-        {
+	//	if (!bNameKeyExist || !bIsRelativeKeyExist) {
 
-			strValue = SERVER_DATA_DIR;
-			bIsRelative = true;
+	//		strValue = SERVER_DATA_DIR;
+	//		bIsRelative = true;
 
-			bool bNewOrUpdateName, bNewOrUpdateIsRelative;
-			p_Config -> Set_str("data","directory_name",strValue,bNewOrUpdateName);
-			p_Config -> Set_bool("data","directory_is_relative",bIsRelative,bNewOrUpdateIsRelative);
-		};
+	//		bool bNewOrUpdateName, bNewOrUpdateIsRelative;
+	//		p_Config -> Set_str("data","directory_name",strValue,bNewOrUpdateName);
+	//		p_Config -> Set_bool("data","directory_is_relative",bIsRelative,bNewOrUpdateIsRelative);
+	//	};
 
-		if (!bIsRelative) strFullPath = strValue;
-		else if (!OTLog::Path_RelativeToCanonical(strFullPath,strConfigFolder,strValue)) return false;
+	//	if (!bIsRelative) strFullPath = strValue;
+	//	else if (!OTPaths::RelativeToCanonical(strFullPath,strConfigFolder,strValue)) return false;
 
-		OTLog::vOutput(0,"%s: Setting Data Path to: %s\n",szFunc,strFullPath.Get());
-		if (!OTLog::Path_SetDataFolder(strFullPath)) return false;
-		if (!OTLog::ConfirmOrCreateExactFolder(strFullPath,bFolderExist)) return false;
+	//	OTLog::vOutput(0,"%s: Setting Data Path to: %s\n",szFunc,strFullPath.Get());
+	//	if (!OTLog::Path_SetDataFolder(strFullPath)) return false;
+	//	if (!OTLog::ConfirmOrCreateExactFolder(strFullPath,bFolderExist)) return false;
 
-		if (!bFolderExist) OTLog::vOutput(0,"%s: Created New Data Folder: %s",szFunc,strFullPath.Get());
-	}
+	//	if (!bFolderExist) OTLog::vOutput(0,"%s: Created New Data Folder: %s",szFunc,strFullPath.Get());
+	//}
 
 	// ---------------------------------------------
 	// WALLET
@@ -1179,61 +1165,62 @@ bool OTServer::LoadConfigFile()
 	// -----------------------------------
 	// LATENCY
 
-	{
-	const char * szComment =
-		"; LATENCY (For Sending and Receiving)\n";
+	//{
+	//const char * szComment =
+	//	"; LATENCY (For Sending and Receiving)\n";
 
-	bool bSectionExist;
-	p_Config -> CheckSetSection("latency",szComment,bSectionExist);
-	}
+	//bool bSectionExist;
+	//p_Config -> CheckSetSection("latency",szComment,bSectionExist);
+	//}
 
-	{
-	const char * szComment =
-		"; blocking=true (usually not recommended) means OT will hang on the send/receive\n"
-		"; call, and wait indefinitely until the send or receive has actually occurred.\n";
+	//{
+	//const char * szComment =
+	//	"; blocking=true (usually not recommended) means OT will hang on the send/receive\n"
+	//	"; call, and wait indefinitely until the send or receive has actually occurred.\n";
 
-	bool bValue, bIsNewKey;
-	p_Config -> CheckSet_bool("latency","blocking",OTLog::IsBlocking(),bValue,bIsNewKey,szComment);
-	OTLog::SetBlocking(bValue);
-	}
-	
-	// (SENDING)
+	//bool bValue, bIsNewKey;
+	//p_Config -> CheckSet_bool("latency","blocking",OTLog::IsBlocking(),bValue,bIsNewKey,szComment);
+	//OTLog::SetBlocking(bValue);
+	//}
+	//
+	//// (SENDING)
 
-	{
-	const char * szComment =
-		"; no_tries is the number of times OT will try to send or receive a message.\n";
+	//{
+	//const char * szComment =
+	//	"; no_tries is the number of times OT will try to send or receive a message.\n";
 
-	bool bIsNewKey;
-	long lValue;
-	p_Config -> CheckSet_long("latency","send_fail_no_tries",OTLog::GetLatencySendNoTries(),lValue,bIsNewKey,szComment);
-	OTLog::SetLatencySendNoTries(static_cast<int>(lValue));
-	}
+	//bool bIsNewKey;
+	//long lValue;
+	//p_Config -> CheckSet_long("latency","send_fail_no_tries",OTLog::GetLatencySendNoTries(),lValue,bIsNewKey,szComment);
+	//OTLog::SetLatencySendNoTries(static_cast<int>(lValue));
+	//}
 
-	{
-	const char * szComment =
-		"; ms is the number of milliseconds it will wait between each attempt.\n";
-		"; for every failed attempt, the ms DOUBLES (up to a max of 5)\n";
+	//{
+	//const char * szComment =
+	//	"; ms is the number of milliseconds it will wait between each attempt.\n";
+	//	"; for every failed attempt, the ms DOUBLES (up to a max of 5)\n";
 
-	bool bIsNewKey;
-	long lValue;
-	p_Config -> CheckSet_long("latency","send_fail_max_ms",OTLog::GetLatencySendMs(),lValue,bIsNewKey,szComment);
-	OTLog::SetLatencySendMs(static_cast<int>(lValue));
-	}
+	//bool bIsNewKey;
+	//long lValue;
+	//p_Config -> CheckSet_long("latency","send_fail_max_ms",OTLog::GetLatencySendMs(),lValue,bIsNewKey,szComment);
+	//OTLog::SetLatencySendMs(static_cast<int>(lValue));
+	//}
 
-	// (RECEIVING)
-	{
-	bool bIsNewKey;
-	long lValue;
-	p_Config -> CheckSet_long("latency","recv_fail_no_tries",OTLog::GetLatencyReceiveNoTries(),lValue,bIsNewKey);
-	OTLog::SetLatencyReceiveNoTries(static_cast<int>(lValue));
-	}
+	//// (RECEIVING)
+	//{
+	//bool bIsNewKey;
+	//long lValue;
+	//p_Config -> CheckSet_long("latency","recv_fail_no_tries",OTLog::GetLatencyReceiveNoTries(),lValue,bIsNewKey);
+	//OTLog::SetLatencyReceiveNoTries(static_cast<int>(lValue));
+	//}
 
-	{
-	bool bIsNewKey;
-	long lValue;
-	p_Config -> CheckSet_long("latency","recv_fail_max_ms",OTLog::GetLatencySendMs(),lValue,bIsNewKey);
-	OTLog::SetLatencyReceiveMs(static_cast<int>(lValue));
-	}
+	//{
+	//bool bIsNewKey;
+	//long lValue;
+	//p_Config -> CheckSet_long("latency","recv_fail_max_ms",OTLog::GetLatencySendMs(),lValue,bIsNewKey);
+	//OTLog::SetLatencyReceiveMs(static_cast<int>(lValue));
+	//}
+
 
 
 	// ----------------------------------------------------------------
@@ -1276,8 +1263,8 @@ bool OTServer::LoadConfigFile()
 
 	bool bIsNewKey;
 	long lValue;
-	p_Config -> CheckSet_long("markets","minimum_scale",OTLog::GetMinMarketScale(),lValue,bIsNewKey,szComment);
-	OTLog::SetMinMarketScale(lValue);
+	p_Config -> CheckSet_long("markets","minimum_scale",GetMinMarketScale(),lValue,bIsNewKey,szComment);
+	SetMinMarketScale(lValue);
 	}
 
 	// ---------------------------------------------
@@ -1464,12 +1451,13 @@ void OTServer::Init(bool bReadOnly/*=false*/)
 	LoadConfigFile(); // Load Config
 
 	// Server Data Path
-    const bool bGetDataFolderSuccess = OTLog::Path_GetDataFolder(m_strDataPath);
-    OT_ASSERT_MSG(bGetDataFolderSuccess,"OTServer::Init: Error! Unable to find data path."); 
+	m_strDataPath = OTDataFolder::Get();
+	bool bGetDataPathSuccess = m_strDataPath.Exists() && 3 < m_strDataPath.GetLength();
+    OT_ASSERT_MSG(bGetDataPathSuccess,"OTServer::Init: Error! Unable to Find Data Path"); 
 	// -------------------------------------------------------
     // PID -- Make sure we're not running two copies of OT on the same data simultaneously here.
     //
-    if (bGetDataFolderSuccess)
+    if (bGetDataPathSuccess)
     {
         
         // If we want to WRITE to the data location, then we can't be in read-only
@@ -1545,37 +1533,37 @@ void OTServer::Init(bool bReadOnly/*=false*/)
 	// -------------------------------------------------------
 	// These storage locations are client-only
 	//
-//	OTLog::ConfirmOrCreateFolder(OTLog::PaymentInboxFolder());
-//	OTLog::ConfirmOrCreateFolder(OTLog::RecordboxFolder());
-//	OTLog::ConfirmOrCreateFolder(OTLog::PurseFolder()); 	
-//	OTLog::ConfirmOrCreateFolder(OTLog::ScriptFolder()); 	
+//	OTPaths::ConfirmCreateFolder(OTFolders::PaymentInbox().Get());
+//	OTPaths::ConfirmCreateFolder(OTFolders::RecordBox().Get());
+//	OTPaths::ConfirmCreateFolder(OTFolders::Purse().Get()); 	
+//	OTPaths::ConfirmCreateFolder(OTFolders::Script().Get()); 	
 
-	{
-	bool bAlreadyExist;
+	//{
+	//bool bAlreadyExist;
 
-	// These storage locations are common to client and server.
-	OTLog::ConfirmOrCreateFolder(OTLog::NymFolder(),bAlreadyExist);
+	//// These storage locations are common to client and server.
+	//OTPaths::ConfirmCreateFolder(OTFolders::Nym().Get(),bAlreadyExist);
 
 
-	OTLog::ConfirmOrCreateFolder(OTLog::ReceiptFolder(),bAlreadyExist);
-	OTLog::ConfirmOrCreateFolder(OTLog::NymboxFolder(),bAlreadyExist);
-	OTLog::ConfirmOrCreateFolder(OTLog::AccountFolder(),bAlreadyExist);
-	OTLog::ConfirmOrCreateFolder(OTLog::InboxFolder(),bAlreadyExist);
-	OTLog::ConfirmOrCreateFolder(OTLog::OutboxFolder(),bAlreadyExist);
-	OTLog::ConfirmOrCreateFolder(OTLog::CertFolder(),bAlreadyExist);
-	OTLog::ConfirmOrCreateFolder(OTLog::PubkeyFolder(),bAlreadyExist); 
-	OTLog::ConfirmOrCreateFolder(OTLog::ContractFolder(),bAlreadyExist);
-	OTLog::ConfirmOrCreateFolder(OTLog::MintFolder(),bAlreadyExist); 
-	OTLog::ConfirmOrCreateFolder(OTLog::MarketFolder(),bAlreadyExist); 	
-	OTLog::ConfirmOrCreateFolder(OTLog::SmartContractsFolder(),bAlreadyExist); 	
-	
-	// This bottom group of storage locations is server-only
+	//OTPaths::ConfirmCreateFolder(OTFolders::Receipt().Get(),bAlreadyExist);
+	//OTPaths::ConfirmCreateFolder(OTFolders::Nymbox().Get(),bAlreadyExist);
+	//OTPaths::ConfirmCreateFolder(OTFolders::Account().Get(),bAlreadyExist);
+	//OTPaths::ConfirmCreateFolder(OTFolders::Inbox().Get(),bAlreadyExist);
+	//OTPaths::ConfirmCreateFolder(OTFolders::Outbox().Get(),bAlreadyExist);
+	//OTPaths::ConfirmCreateFolder(OTFolders::Cert().Get(),bAlreadyExist);
+	//OTPaths::ConfirmCreateFolder(OTFolders::Pubkey().Get(),bAlreadyExist); 
+	//OTPaths::ConfirmCreateFolder(OTFolders::Contract().Get(),bAlreadyExist);
+	//OTPaths::ConfirmCreateFolder(OTFolders::Mint().Get(),bAlreadyExist); 
+	//OTPaths::ConfirmCreateFolder(OTFolders::Market().Get(),bAlreadyExist); 	
+	//OTPaths::ConfirmCreateFolder(OTFolders::SmartContracts().Get(),bAlreadyExist); 	
 	//
-	OTLog::ConfirmOrCreateFolder(OTLog::UserAcctFolder(),bAlreadyExist);
-	OTLog::ConfirmOrCreateFolder(OTLog::CronFolder(),bAlreadyExist);
-	OTLog::ConfirmOrCreateFolder(OTLog::SpentFolder(),bAlreadyExist);	
+	//// This bottom group of storage locations is server-only
+	////
+	//OTPaths::ConfirmCreateFolder(OTFolder::UserAcct(),bAlreadyExist);
+	//OTPaths::ConfirmCreateFolder(OTFolders::Cron().Get(),bAlreadyExist);
+	//OTPaths::ConfirmCreateFolder(OTFolders::Spent().Get(),bAlreadyExist);	
 
-	}
+	//}
 	// -------------------------------------------------------
 	// Load up the transaction number and other OTServer data members.
     //
@@ -1651,7 +1639,7 @@ bool OTServer::LoadServerUserAndContract()
         // (For signing stuff...)
         //
         m_Cron.SetServerID(SERVER_ID);
-        m_Cron.SetServerNym(&m_nymServer);
+		m_Cron.SetServerNym(std::shared_ptr<OTPseudonym>(&m_nymServer));
         
         if (!m_Cron.LoadCron())
             OTLog::vError("%s: Failed loading Cron file. (Did you just create this server?)\n", szFunc);
@@ -1659,7 +1647,7 @@ bool OTServer::LoadServerUserAndContract()
         OTLog::vOutput(0, "%s: Loading the server contract...\n", szFunc);
         
         // We have the serverID, so let's load  up the server Contract!
-        OTString strContractPath(OTLog::ContractFolder());
+        OTString strContractPath(OTFolders::Contract().Get());
         
         OTServerContract * pContract = new OTServerContract(m_strServerID, strContractPath, m_strServerID, m_strServerID);
         OT_ASSERT_MSG(NULL != pContract, "ASSERT while allocating memory for main Server Contract in OTServer::LoadServerUserAndContract\n");
@@ -2189,7 +2177,7 @@ bool OTServer::LoadMainFile(bool bReadOnly/*=false*/)
                                        AssetName.Get(), AssetID.Get());
                         
                         OTString strContractPath;
-                        strContractPath = OTLog::ContractFolder();
+                        strContractPath = OTFolders::Contract().Get();
 
                         OTAssetContract * pContract = new OTAssetContract(AssetName, strContractPath, AssetID, AssetID);
                         
@@ -2239,7 +2227,7 @@ bool OTServer::LoadMainFile(bool bReadOnly/*=false*/)
                         
                         OTString strContractPath;
                         strContractPath.Format("%s%s%s%s%s", OTLog::Path(), OTLog::PathSeparator(),
-                                               OTLog::ContractFolder(),
+                                               OTFolders::Contract().Get(),
                                                OTLog::PathSeparator(), ServerID.Get());
                         OTServerContract * pContract = new OTServerContract(ServerName, strContractPath, ServerID);
 
@@ -3320,7 +3308,7 @@ void OTServer::UserCmdIssueAssetType(OTPseudonym & theNym, OTMessage & MsgIn, OT
 	else
 	{		
 		// Pull the contract out of the message and verify it.
-		OTString strFoldername(OTLog::ContractFolder()), strFilename(MsgIn.m_strAssetID.Get());
+		OTString strFoldername(OTFolders::Contract().Get()), strFilename(MsgIn.m_strAssetID.Get());
 
 		OTString strContract(MsgIn.m_ascPayload);
 		pAssetContract = new OTAssetContract(MsgIn.m_strAssetID, strFoldername, strFilename, MsgIn.m_strAssetID);
@@ -3328,13 +3316,13 @@ void OTServer::UserCmdIssueAssetType(OTPseudonym & theNym, OTMessage & MsgIn, OT
 		OTIdentifier	ASSET_USER_ID;
 		bool			bSuccessLoadingContract	= false;
 		bool			bSuccessCalculateDigest = false;
-		OTPseudonym *	pNym					= NULL;
+		std::shared_ptr<OTPseudonym>	pNym = std::shared_ptr<OTPseudonym>();
 
 		if (NULL != pAssetContract)
 		{
 			bSuccessLoadingContract	= pAssetContract->LoadContractFromString(strContract);
 			
-            pNym = (OTPseudonym*)pAssetContract->GetContractPublicNym(); // todo fix this cast.
+            pNym = pAssetContract->GetContractPublicNym(); // todo fix this cast.
             
 			if (NULL != pNym) 
 			{
@@ -3401,7 +3389,7 @@ void OTServer::UserCmdIssueAssetType(OTPseudonym & theNym, OTMessage & MsgIn, OT
 						SaveMainFile(); // So the main xml file knows to load this asset type next time we run.
 						
 						// Make sure the contracts/%s file is created for next time.
-						pAssetContract->SaveContract(OTLog::ContractFolder(), strFilename.Get());
+						pAssetContract->SaveContract(OTFolders::Contract().Get(), strFilename.Get());
 						
 						// ---------------------------------------------------
 
@@ -3713,7 +3701,7 @@ void OTServer::UserCmdIssueBasket(OTPseudonym & theNym, OTMessage & MsgIn, OTMes
 				msgOut.m_strAssetID = STR_BASKET_CONTRACT_ID;
 				
 				// Save the new Asset Contract to disk
-				const OTString strFoldername(OTLog::ContractFolder()), strFilename(STR_BASKET_CONTRACT_ID.Get());
+				const OTString strFoldername(OTFolders::Contract().Get()), strFilename(STR_BASKET_CONTRACT_ID.Get());
 
 				// Save the new basket contract to the contracts folder 
 				// (So the users can use it the same as they would use any other contract.)
@@ -7522,7 +7510,7 @@ void OTServer::NotarizeCancelCronItem(OTPseudonym & theNym, OTAccount & theAsset
                 
                 if ((NULL != pCronItem) && (pCronItem->CanRemoveItemFromCron(theNym))) // see if theNym has right to remove the cronItem from processing.
                 {
-					bSuccess = m_Cron.RemoveCronItem(pCronItem->GetTransactionNum(), theNym); // <=====
+					bSuccess = m_Cron.RemoveCronItem(pCronItem->GetTransactionNum(), std::shared_ptr<OTPseudonym>(&theNym)); // <=====
 				}
 
                 // If we were just successful in removing the offer from the market, that means a finalReceipt was
@@ -8703,10 +8691,10 @@ void OTServer::NotarizeMarketOffer(OTPseudonym & theNym, OTAccount & theAssetAcc
 			{
 				OTLog::Output(0, "FAILED verifying offer for Trade in OTServer::NotarizeMarketOffer\n");	
 			}
-			else if (theOffer.GetScale() < OTLog::GetMinMarketScale())
+			else if (theOffer.GetScale() < GetMinMarketScale())
 			{
 				OTLog::vOutput(0, "OTServer::NotarizeMarketOffer: FAILED verifying Offer, SCALE: %ld. (Minimum is %ld.) \n",
-							   theOffer.GetScale(), OTLog::GetMinMarketScale());	
+							   theOffer.GetScale(), GetMinMarketScale());	
 			}
 			else if ((theNym.GetSetOpenCronItems().size() / 3) >= OTCron::GetCronMaxItemsPerNym())
 			{
@@ -11219,7 +11207,7 @@ void OTServer::NotarizeProcessNymbox(OTPseudonym & theNym, OTTransaction & tranI
 		else
 			strPath.Format((char*)"%s.fail", strNymID.Get());
 		
-		const char * szFoldername = OTLog::ReceiptFolder();
+		const char * szFoldername = OTFolders::Receipt().Get();
 		
 		tranOut.SaveContract(szFoldername, strPath.Get());	
 	}
@@ -12604,7 +12592,7 @@ void OTServer::NotarizeProcessInbox(OTPseudonym & theNym, OTAccount & theAccount
 	else
 		strPath.Format((char*)"%s.fail", strAcctID.Get());
 	
-	const char * szFoldername = OTLog::ReceiptFolder();
+	const char * szFoldername = OTFolders::Receipt().Get();
 	
 	// Save the receipt. (My outgoing transaction including the client's signed request that triggered it.)
 	tranOut.SaveContract(szFoldername, strPath.Get());	
@@ -12966,7 +12954,7 @@ bool OTServer::ProcessUserCommand(OTMessage & theMessage,
 						// Let's create it.
 
 						// First we save the createUserAccount message in the accounts folder...
-						if (msgOut.m_bSuccess = theMessage.SaveContract(OTLog::UserAcctFolder(), theMessage.m_strNymID.Get()))
+						if (msgOut.m_bSuccess = theMessage.SaveContract(OTFolders::UserAcct().Get(), theMessage.m_strNymID.Get()))
 						{
 							OTLog::Output(0, "Success saving new user account verification file.\n");
 							

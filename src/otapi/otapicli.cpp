@@ -15,7 +15,6 @@
 //#include <vcclr.h>
 
 using namespace otapicli;
-using namespace std;
 
 otapi_wrap::otapi_wrap() {
 
@@ -82,6 +81,7 @@ static time_t Native (DateTime % dt) {
 	DateTime ^ startTime = gcnew DateTime (1970, 1, 1);
 	return static_cast<time_t>((dt - *startTime).TotalSeconds);
 };
+
 
 static DateTime Managed (const time_t& time)
 {

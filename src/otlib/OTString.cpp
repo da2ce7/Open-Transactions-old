@@ -431,6 +431,28 @@ std::string & OTString::trim(std::string& str)
 	return str;
 }
 
+
+const std::string OTString::replace_chars(
+	const std::string & str,
+	const std::string & charsFrom,
+	const char & charTo
+	)
+{
+	std::string l_str(str);
+	size_t found;
+
+	found=str.find_first_of(charsFrom);
+	while (found!=std::string::npos)
+	{
+		l_str[found]=charTo;
+		found=str.find_first_of(charsFrom,found+1);
+	}
+	return l_str;
+}
+
+
+
+
 // ----------------------------------------------------------------------
 
 
@@ -1229,14 +1251,15 @@ void OTString::Format(const char *fmt, ...)
     va_list vl;
     va_start(vl, fmt);
     
-    std::string str_output;
+    std::string strOutput = "";
     
-    const bool bSuccess = OTString::vformat(fmt, &vl, str_output);
+    const bool bSuccess = OTString::vformat(fmt, &vl, strOutput);
     
     va_end(vl);
     
     if (bSuccess)
-        Set(str_output.c_str());
+        Set(strOutput.c_str());
+
 }
 
 // ------------------------------------------------------------
@@ -1247,15 +1270,15 @@ void OTString::Concatenate(const char *fmt, ...)
     va_list vl;
     va_start(vl, fmt);
     
-    std::string str_output;
+    std::string strOutput;
     
-    const bool bSuccess = OTString::vformat(fmt, &vl, str_output);
+    const bool bSuccess = OTString::vformat(fmt, &vl, strOutput);
     
     va_end(vl);
     
     if (bSuccess)
     {
-        const OTString strConcat(str_output);
+		const OTString strConcat(strOutput);
         
         Concatenate(strConcat);
     }

@@ -137,7 +137,6 @@ using namespace io;
 #include "OTIdentifier.h"
 #include "OTInstrument.h"
 
-using namespace std;
 
 
 

@@ -2,7 +2,6 @@
 #include <fstream>
 #include <string>
 #include "BitcoinAcct.pb.h"
-using namespace std;
 
 // Iterates though all people in the Wallet and prints info about them.
 void ListBitcoinAccts(const OT_GUI::Wallet& wallet) 
@@ -11,16 +10,16 @@ void ListBitcoinAccts(const OT_GUI::Wallet& wallet)
   {
     const OT_GUI::BitcoinAcct& bitcoin_acct = wallet.bitcoin_acct(i);
 
-    cout << "BitcoinAcct ID: " << bitcoin_acct.bitcoin_id() << endl;
+    std::cout << "BitcoinAcct ID: " << bitcoin_acct.bitcoin_id() << std::endl;
 	      
 	  if (bitcoin_acct.has_bitcoin_name()) 
 	  {
-		  cout << "  Name: " << bitcoin_acct.bitcoin_name() << endl;
+		  std::cout << "  Name: " << bitcoin_acct.bitcoin_name() << std::endl;
 	  }
 	  
 	  if (bitcoin_acct.has_gui_label()) 
 	  {
-		  cout << "  GUI Label: " << bitcoin_acct.gui_label() << endl;
+		  std::cout << "  GUI Label: " << bitcoin_acct.gui_label() << std::endl;
 	  }
   }
 }
@@ -33,7 +32,7 @@ int main(int argc, char* argv[]) {
   GOOGLE_PROTOBUF_VERIFY_VERSION;
 
   if (argc != 2) {
-    cerr << "Usage:  " << argv[0] << " WALLET_FILE" << endl;
+    cerr << "Usage:  " << argv[0] << " WALLET_FILE" << std::endl;
     return -1;
   }
 
@@ -43,7 +42,7 @@ int main(int argc, char* argv[]) {
     // Read the existing wallet.
     fstream input(argv[1], ios::in | ios::binary);
     if (!wallet.ParseFromIstream(&input)) {
-      cerr << "Failed to parse wallet." << endl;
+      cerr << "Failed to parse wallet." << std::endl;
       return -1;
     }
   }

@@ -98,6 +98,7 @@ otlib_sources     =		easyzlib.c			\
 				OTMint.cpp			\
 				OTOffer.cpp			\
 				OTPassword.cpp			\
+				OTPaths.cpp			\
 				OTPayload.cpp			\
 				OTPayment.cpp			\
 				OTPaymentPlan.cpp		\
@@ -163,6 +164,7 @@ otlib_headers =			$(otlib_headers_dir)/anyoption.h		\
 				$(otlib_headers_dir)/OTMint.h			\
 				$(otlib_headers_dir)/OTOffer.h			\
 				$(otlib_headers_dir)/OTPassword.h		\
+				$(otlib_headers_dir)/OTPaths.h			\
 				$(otlib_headers_dir)/OTPayload.h		\
 				$(otlib_headers_dir)/OTPayment.h		\
 				$(otlib_headers_dir)/OTPaymentPlan.h		\

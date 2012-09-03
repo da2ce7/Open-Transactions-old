@@ -4649,6 +4649,8 @@ bool OTEnvelope::Encrypt(const OTPassword & theRawSymmetricKey, // The symmetric
 	theEncryptedOutput.Release();
     
     // -----------------------------------------------
+
+
     class _OTEnv_Enc_stat
     {
     private:
@@ -4674,6 +4676,9 @@ bool OTEnvelope::Encrypt(const OTPassword & theRawSymmetricKey, // The symmetric
 			m_szFunc = NULL; // keep the static analyzer happy
         }
     };
+
+
+
     _OTEnv_Enc_stat  theInstance(szFunc, ctx);
     // -----------------------------------------------
 

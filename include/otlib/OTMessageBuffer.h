@@ -145,10 +145,9 @@ class OTPseudonym;
 class OTMessage;
 class OTTransaction;
 
-using namespace std;
 
-typedef list	 <		shared_ptr<OTMessage>>	listOfMessages; // Incoming server replies to your messages.
-typedef multimap <long, shared_ptr<OTMessage>>	mapOfMessages; // Your outgoing messages, mapped by request number.
+typedef std::list	 <		std::shared_ptr<OTMessage>>	listOfMessages; // Incoming server replies to your messages.
+typedef std::multimap <long, std::shared_ptr<OTMessage>>	mapOfMessages; // Your outgoing messages, mapped by request number.
 
 
 // ------------------------------------
@@ -163,28 +162,38 @@ typedef multimap <long, shared_ptr<OTMessage>>	mapOfMessages; // Your outgoing m
 // as well. (If "stack" form is preferable.)
 //
 
+#ifdef _WIN32
+#pragma warning( push )
+#pragma warning( disable : 4512 )
+#endif
+
 class OTMessageBuffer
 {
 	listOfMessages m_listMessages;
 	// --------------------------------
 	// Just to keep you out of trouble.
-	OTMessageBuffer (const OTMessageBuffer & rhs) {}
-	OTMessageBuffer & operator=(const OTMessageBuffer & rhs) { return *this; }
+	OTMessageBuffer (const OTMessageBuffer &) {}
 public:
 	OTMessageBuffer() {}
 	EXPORT	~OTMessageBuffer();
 	// -------------------------------
 
 	EXPORT void Clear ();
-	EXPORT	void Push (OTMessage & theMessage); // Push: theMessage must be heap-allocated. Takes ownership.
 
-	EXPORT	std::unique_ptr<OTMessage> Pop (
+	EXPORT	std::shared_ptr<OTMessage>		Push(std::unique_ptr<OTMessage> pMessage); // Push: pMessage must be std::unique_ptr, returns shared_ptr. Takes ownership.
+	EXPORT	void						Push(const std::shared_ptr<OTMessage> & pMessage); // Push: another owner.
+
+
+	EXPORT	std::shared_ptr<OTMessage>	Pop(	 // Pop: Caller IS responsible to delete.
 		const long & lRequestNum,
 		const OTString & strServerID,
 		const OTString & strNymID
-		);  // Pop: Caller IS responsible to delete.
+		);
 };
 
+#ifdef _WIN32
+#pragma warning( pop )
+#endif
 
 // ------------------------------------
 
@@ -212,8 +221,7 @@ class OTMessageOutbuffer
 	mapOfMessages m_mapMessages;
 	// --------------------------------
 	// Just to keep you out of trouble.
-	OTMessageOutbuffer (const OTMessageOutbuffer & rhs) {}
-	OTMessageOutbuffer & operator=(const OTMessageOutbuffer & rhs) { return *this; }
+	OTMessageOutbuffer (const OTMessageOutbuffer &) {}
 
 public:
 	OTMessageOutbuffer() {}
@@ -222,13 +230,13 @@ public:
 	// deletes the old one before adding the new one. In the future may contemplate using multimap
 	// here instead (if completeness becomes desired over uniqueness.)
 
-	EXPORT	void Clear(const OTString * pstrServerID=NULL, const OTString * pstrNymID=NULL, OTPseudonym * pNym=NULL, const bool * pbHarvestingForRetry=NULL);
-	EXPORT	void AddSentMessage (OTMessage & theMessage); // Allocate theMsg on the heap (takes ownership.) Mapped by request num.
+	EXPORT	void Clear(const OTString * pstrServerID=NULL, const OTString * pstrNymID=NULL, const std::shared_ptr<OTPseudonym> pNym = std::shared_ptr<OTPseudonym>(), const bool * pbHarvestingForRetry=NULL);
+	EXPORT	std::shared_ptr<OTMessage> AddSentMessage (std::unique_ptr<OTMessage> pMessage); // Allocate theMsg on the heap (takes ownership.) Mapped by request num.
 
-	EXPORT shared_ptr<OTMessage> GetSentMessage (const long & lRequestNum, const OTString & strServerID, const OTString & strNymID); // null == not found. caller NOT responsible to delete.
+	EXPORT std::shared_ptr<OTMessage> GetSentMessage (const long & lRequestNum, const OTString & strServerID, const OTString & strNymID); // null == not found. caller NOT responsible to delete.
 	EXPORT	bool RemoveSentMessage (const long & lRequestNum, const OTString & strServerID, const OTString & strNymID); // true == it was removed. false == it wasn't found.
 
-	EXPORT	shared_ptr<OTMessage> GetSentMessage (const OTTransaction & theTransaction); // null == not found. caller NOT responsible to delete.
+	EXPORT	std::shared_ptr<OTMessage> GetSentMessage (const OTTransaction & theTransaction); // null == not found. caller NOT responsible to delete.
 	EXPORT	bool RemoveSentMessage (const OTTransaction & theTransaction); // true == it was removed. false == it wasn't found.
 };
 

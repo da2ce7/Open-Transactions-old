@@ -2,7 +2,6 @@
 #include <fstream>
 #include <string>
 #include "BitcoinAcct.pb.h"
-using namespace std;
 
 // This function fills in a BitcoinAcct message based on user input.
 void PromptForAddress(OT_GUI::BitcoinAcct* person) 
@@ -36,7 +35,7 @@ int main(int argc, char* argv[]) {
 	GOOGLE_PROTOBUF_VERIFY_VERSION;
 	
 	if (argc != 2) {
-		cerr << "Usage:  " << argv[0] << " WALLET_FILE" << endl;
+		cerr << "Usage:  " << argv[0] << " WALLET_FILE" << std::endl;
 		return -1;
 	}
 	
@@ -46,9 +45,9 @@ int main(int argc, char* argv[]) {
 		// Read the existing wallet.
 		fstream input(argv[1], ios::in | ios::binary);
 		if (!input) {
-			cout << argv[1] << ": File not found.  Creating a new file." << endl;
+			cout << argv[1] << ": File not found.  Creating a new file." << std::endl;
 		} else if (!wallet.ParseFromIstream(&input)) {
-			cerr << "Failed to parse GUI wallet." << endl;
+			cerr << "Failed to parse GUI wallet." << std::endl;
 			return -1;
 		}
 	}
@@ -60,7 +59,7 @@ int main(int argc, char* argv[]) {
 		// Write the new wallet back to disk.
 		fstream output(argv[1], ios::out | ios::trunc | ios::binary);
 		if (!wallet.SerializeToOstream(&output)) {
-			cerr << "Failed to write GUI wallet." << endl;
+			cerr << "Failed to write GUI wallet." << std::endl;
 			return -1;
 		}
 	}

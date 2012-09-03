@@ -148,9 +148,9 @@ AnyOption::init(int maxopt, int maxcharopt )
 	strcpy( long_opt_prefix , "--" );
 
 	if( alloc() == false ){
-		cout << endl << "OPTIONS ERROR : Failed allocating memory" ;
-		cout << endl ;
-		cout << "Exiting." << endl ;
+		std::cout << std::endl << "OPTIONS ERROR : Failed allocating memory" ;
+		std::cout << std::endl ;
+		std::cout << "Exiting." << std::endl ;
 		exit (0);
 	}
 }
@@ -361,27 +361,27 @@ void
 AnyOption::printVerbose()
 {
 	if( verbose )
-		cout << endl  ;
+		std::cout << std::endl  ;
 }
 void
 AnyOption::printVerbose( const char *msg )
 {
 	if( verbose )
-		cout << msg  ;
+		std::cout << msg  ;
 }
 
 void
 AnyOption::printVerbose( char *msg )
 {
 	if( verbose )
-		cout << msg  ;
+		std::cout << msg  ;
 }
 
 void
 AnyOption::printVerbose( char ch )
 {
 	if( verbose )
-		cout << ch ;
+		std::cout << ch ;
 }
 
 bool
@@ -591,22 +591,22 @@ AnyOption::addOption( char opt, int type )
 void
 AnyOption::addOptionError( const char *opt )
 {
-	cout << endl ;
-	cout << "OPTIONS ERROR : Failed allocating extra memory " << endl ;
-	cout << "While adding the option : \""<< opt << "\"" << endl;
-	cout << "Exiting." << endl ;
-	cout << endl ;
+	std::cout << std::endl ;
+	std::cout << "OPTIONS ERROR : Failed allocating extra memory " << std::endl ;
+	std::cout << "While adding the option : \""<< opt << "\"" << std::endl;
+	std::cout << "Exiting." << std::endl ;
+	std::cout << std::endl ;
 	exit(0);
 }
 
 void
 AnyOption::addOptionError( char opt )
 {
-	cout << endl ;
-	cout << "OPTIONS ERROR : Failed allocating extra memory " << endl ;
-	cout << "While adding the option: \""<< opt << "\"" << endl;
-	cout << "Exiting." << endl ;
-	cout << endl ;
+	std::cout << std::endl ;
+	std::cout << "OPTIONS ERROR : Failed allocating extra memory " << std::endl ;
+	std::cout << "While adding the option: \""<< opt << "\"" << std::endl;
+	std::cout << "Exiting." << std::endl ;
+	std::cout << std::endl ;
 	exit(0);
 }
 
@@ -985,15 +985,15 @@ AnyOption::readFile( const char* fname )
 {
         int length;
         char *buffer;
-        ifstream is;
-        is.open ( fname , ifstream::in );
+        std::ifstream is;
+        is.open ( fname , std::ifstream::in );
         if( ! is.good() ){
                 is.close();
                 return NULL;
         }
-        is.seekg (0, ios::end);
+        is.seekg (0, std::ios::end);
         length = static_cast<int>(is.tellg());
-        is.seekg (0, ios::beg);
+        is.seekg (0, std::ios::beg);
         buffer = (char*) malloc((length + 1)*sizeof(char));
         is.read (buffer,length);
         buffer[length] = nullterminate;
@@ -1205,10 +1205,10 @@ AnyOption::printUsage()
 	
 	if( once ) {
 		once = false ;
-		cout << endl ;
+		std::cout << std::endl ;
 		for( int i = 0 ; i < usage_lines ; i++ )
-			cout << usage[i] << endl ;	
-		cout << endl ;
+			std::cout << usage[i] << std::endl ;	
+		std::cout << std::endl ;
 	}
 }
 	
@@ -1229,11 +1229,11 @@ AnyOption::addUsage( const char *line )
 void
 AnyOption::addUsageError( const char *line )
 {
-	cout << endl ;
-	cout << "OPTIONS ERROR : Failed allocating extra memory " << endl ;
-	cout << "While adding the usage/help  : \""<< line << "\"" << endl;
-	cout << "Exiting." << endl ;
-	cout << endl ;
+	std::cout << std::endl ;
+	std::cout << "OPTIONS ERROR : Failed allocating extra memory " << std::endl ;
+	std::cout << "While adding the usage/help  : \""<< line << "\"" << std::endl;
+	std::cout << "Exiting." << std::endl ;
+	std::cout << std::endl ;
 	exit(0);
 
 }

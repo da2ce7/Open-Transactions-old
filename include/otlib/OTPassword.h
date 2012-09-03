@@ -349,9 +349,13 @@ class OTString;
  */
 
 class OTPassword;
-
 class OTMasterKey;
 
+
+#ifdef _WIN32
+#pragma warning( push )
+#pragma warning( disable : 4512 )
+#endif
 
 class OTPasswordData
 {
@@ -373,13 +377,17 @@ EXPORT    void            setUsingOldSystem(bool bUsing=true);
     OTPassword  *    GetMasterPW () { return m_pMasterPW;  }
     OTMasterKey *    GetMasterKey() { return m_pMasterKey; }
     // --------------------------------
+
 EXPORT    OTPasswordData(const char        *   szDisplay, OTPassword * pMasterPW=NULL, OTMasterKey * pMasterKey=NULL);
 EXPORT    OTPasswordData(const std::string & str_Display, OTPassword * pMasterPW=NULL, OTMasterKey * pMasterKey=NULL);  
 EXPORT    OTPasswordData(const OTString    &  strDisplay, OTPassword * pMasterPW=NULL, OTMasterKey * pMasterKey=NULL);  
+
 EXPORT    ~OTPasswordData();
 };
 
-
+#ifdef _WIN32
+#pragma warning( pop )
+#endif
 
 // Originally written for the safe storage of passwords.
 // Now used for symmetric keys as well.

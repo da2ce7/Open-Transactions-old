@@ -85,9 +85,9 @@
 		IrrXMLReader* xml = createIrrXMLReader("config.xml");
 
 		// strings for storing the data we want to get out of the file
-		std::string modelFile;
-		std::string messageText;
-		std::string caption;
+		string modelFile;
+		string messageText;
+		string caption;
 
 		// parse the file until end reached
 
