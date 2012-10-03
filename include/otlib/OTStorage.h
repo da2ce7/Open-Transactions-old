@@ -128,6 +128,19 @@ yIh+Yp/KBzySU3inzclaAfv102/t5xi1l+GTyWHiwZxlyt5PBVglKWx/Ust9CIvN
 #endif
 #include <ExportWrapper.h>
 
+#ifdef SWIGIMPORTED
+#ifndef NO_PACKED_BUFFER
+#define NO_PACKED_BUFFER
+#endif
+#ifndef NO_STORAGE_FS
+#define NO_STORAGE_FS
+#endif
+#ifndef NO_INIT_OTDB
+#define NO_INIT_OTDB
+#endif
+#endif
+
+
 #ifdef _WIN32
 
 #include <WinsockWrapper.h>
@@ -275,7 +288,7 @@ namespace OTDB
 	// 
 	// STORED OBJECT TYPES...
 	// 
-	extern const char * StoredObjectTypeStrings[];
+	EXPORT extern const char * StoredObjectTypeStrings[];
 
 	enum StoredObjectType
 	{
@@ -317,6 +330,8 @@ namespace OTDB
 	class PackedBuffer;	// A buffer for containing a PACKED STORABLE. (On its way to/from storage.)
 
 
+	// ********************************************************************
+
 #ifndef NO_INIT_OTDB
 
 	// OTDB NAMESPACE "CONSTRUCTOR"
@@ -324,10 +339,11 @@ namespace OTDB
 	class InitOTDBDetails 
 	{
 	public:
-		InitOTDBDetails();  // See implementation of this in CPP file for namespace construction.
-		~InitOTDBDetails(); // Ditto.
+	EXPORT	InitOTDBDetails();  // See implementation of this in CPP file for namespace construction.
+	EXPORT	~InitOTDBDetails(); // Ditto.
 	};
 	// -------------------------------
+
 
 	// As far as the USERS of the Storage API are concerned, the above classes are nearly everything.
 	// (In addition to the "Pure Data" classes such as ContactNym, BitcoinAcct, etc.)
@@ -404,7 +420,8 @@ namespace OTDB
 		//
 #define DEFINE_OT_DYNAMIC_CAST(CLASS_NAME) \
 	virtual CLASS_NAME * clone () const { OT_ASSERT(false); std::cout << "********* THIS SHOULD NEVER HAPPEN!!!!! *****************" << std::endl; return NULL; } \
-	static CLASS_NAME *			ot_dynamic_cast(		Storable *pObject) { return dynamic_cast<CLASS_NAME *>(pObject); }
+	static CLASS_NAME *			ot_dynamic_cast(		Storable *pObject) { return dynamic_cast<CLASS_NAME *>(pObject); } \
+	static Storable *			ot_dynamic_cast_box(  CLASS_NAME *pUnboxed) { return dynamic_cast<Storable *>(pUnboxed); }
 		//	static const CLASS_NAME	*	ot_dynamic_cast(const	Storable *pObject) { return dynamic_cast<const T *>(pObject); }
 
 		// -------------------
@@ -470,6 +487,9 @@ namespace OTDB
 	//
 	// They're all based on this template:
 	//
+
+
+
 #define DECLARE_PACKED_BUFFER_SUBCLASS(theNewType, thePackerType, theInterfaceType, theInternalType) \
 	class theNewType : public PackedBuffer \
 	{ \
@@ -2157,7 +2177,6 @@ virtual bool WriteToOStream(std::ostream &outStream); \
 
 namespace OTDB 
 {
-
 	// Interface:    IStorablePB
 	//
 	DeclareBasedInterface(IStorablePB, IStorable)

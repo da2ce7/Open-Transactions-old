@@ -67,4 +67,10 @@ public class AddressBook : Storable {
     return ret;
   }
 
+  public static Storable ot_dynamic_cast_box(AddressBook pUnboxed) {
+    IntPtr cPtr = otapiPINVOKE.AddressBook_ot_dynamic_cast_box(AddressBook.getCPtr(pUnboxed));
+    Storable ret = (cPtr == IntPtr.Zero) ? null : new Storable(cPtr, false);
+    return ret;
+  }
+
 }

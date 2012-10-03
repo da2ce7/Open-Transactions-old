@@ -57,4 +57,10 @@ public class Displayable : Storable {
     return ret;
   }
 
+  public static Storable ot_dynamic_cast_box(Displayable pUnboxed) {
+    IntPtr cPtr = otapiPINVOKE.Displayable_ot_dynamic_cast_box(Displayable.getCPtr(pUnboxed));
+    Storable ret = (cPtr == IntPtr.Zero) ? null : new Storable(cPtr, false);
+    return ret;
+  }
+
 }

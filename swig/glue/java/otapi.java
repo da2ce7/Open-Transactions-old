@@ -9,10 +9,6 @@
 package org.opentransactions.jni.core;
 
 public class otapi implements otapiConstants {
-  public static boolean OT_API_Set_PasswordCallback(OTCaller theCaller) {
-    return otapiJNI.OT_API_Set_PasswordCallback(OTCaller.getCPtr(theCaller), theCaller);
-  }
-
   public static boolean InitDefaultStorage(StorageType eStoreType, PackType ePackType) {
     return otapiJNI.InitDefaultStorage(eStoreType.swigValue(), ePackType.swigValue());
   }

@@ -192,6 +192,8 @@ public :
 	*/
 	EXPORT static bool Init(); // actually returns BOOL
 
+	EXPORT static const bool SetupSwigPasswordCallback(const OTPassword::fPasswordCallback & functionGetPassword, const OTPassword::fPasswordCallback & functionMakeNewPassword);
+
 
 	// --------------------------------------------------------------------
 	/**

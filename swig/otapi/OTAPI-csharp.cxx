@@ -346,51 +346,57 @@ namespace Swig {
 
 #include "OTAPI-csharp.h"
 
-SwigDirector_OTCallback::SwigDirector_OTCallback() : OTCallback(), Swig::Director() {
+SwigDirector_SwigPasswordCallback::SwigDirector_SwigPasswordCallback() : SwigPasswordCallback(), Swig::Director() {
   swig_init_callbacks();
 }
 
-SwigDirector_OTCallback::~SwigDirector_OTCallback() {
+SwigDirector_SwigPasswordCallback::~SwigDirector_SwigPasswordCallback() {
   
 }
 
 
-void SwigDirector_OTCallback::runOne(char const *szDisplay, OTPassword &theOutput) {
-  char * jszDisplay = 0 ;
-  void * jtheOutput = 0 ;
+bool const SwigDirector_SwigPasswordCallback::SwigGetPassword(OTPassword &passwordObject, std::string const &strMessage) {
+  bool c_result = SwigValueInit< bool >() ;
+  unsigned int jresult = 0 ;
+  void * jpasswordObject = 0 ;
+  char * jstrMessage = 0 ;
   
-  if (!swig_callbackrunOne) {
-    OTCallback::runOne(szDisplay,theOutput);
-    return;
+  if (!swig_callbackSwigGetPassword) {
+    return SwigPasswordCallback::SwigGetPassword(passwordObject,strMessage);
   } else {
-    jszDisplay = SWIG_csharp_string_callback((const char *)szDisplay); 
-    jtheOutput = (OTPassword *) &theOutput; 
-    swig_callbackrunOne(jszDisplay, jtheOutput);
+    jpasswordObject = (OTPassword *) &passwordObject; 
+    jstrMessage = SWIG_csharp_string_callback((&strMessage)->c_str()); 
+    jresult = (unsigned int) swig_callbackSwigGetPassword(jpasswordObject, jstrMessage);
+    c_result = jresult ? true : false; 
   }
+  return c_result;
 }
 
-void SwigDirector_OTCallback::runTwo(char const *szDisplay, OTPassword &theOutput) {
-  char * jszDisplay = 0 ;
-  void * jtheOutput = 0 ;
+bool const SwigDirector_SwigPasswordCallback::SwigNewPassword(OTPassword &passwordObject, std::string const &strMessage) {
+  bool c_result = SwigValueInit< bool >() ;
+  unsigned int jresult = 0 ;
+  void * jpasswordObject = 0 ;
+  char * jstrMessage = 0 ;
   
-  if (!swig_callbackrunTwo) {
-    OTCallback::runTwo(szDisplay,theOutput);
-    return;
+  if (!swig_callbackSwigNewPassword) {
+    return SwigPasswordCallback::SwigNewPassword(passwordObject,strMessage);
   } else {
-    jszDisplay = SWIG_csharp_string_callback((const char *)szDisplay); 
-    jtheOutput = (OTPassword *) &theOutput; 
-    swig_callbackrunTwo(jszDisplay, jtheOutput);
+    jpasswordObject = (OTPassword *) &passwordObject; 
+    jstrMessage = SWIG_csharp_string_callback((&strMessage)->c_str()); 
+    jresult = (unsigned int) swig_callbackSwigNewPassword(jpasswordObject, jstrMessage);
+    c_result = jresult ? true : false; 
   }
+  return c_result;
 }
 
-void SwigDirector_OTCallback::swig_connect_director(SWIG_Callback0_t callbackrunOne, SWIG_Callback1_t callbackrunTwo) {
-  swig_callbackrunOne = callbackrunOne;
-  swig_callbackrunTwo = callbackrunTwo;
+void SwigDirector_SwigPasswordCallback::swig_connect_director(SWIG_Callback0_t callbackSwigGetPassword, SWIG_Callback1_t callbackSwigNewPassword) {
+  swig_callbackSwigGetPassword = callbackSwigGetPassword;
+  swig_callbackSwigNewPassword = callbackSwigNewPassword;
 }
 
-void SwigDirector_OTCallback::swig_init_callbacks() {
-  swig_callbackrunOne = 0;
-  swig_callbackrunTwo = 0;
+void SwigDirector_SwigPasswordCallback::swig_init_callbacks() {
+  swig_callbackSwigGetPassword = 0;
+  swig_callbackSwigNewPassword = 0;
 }
 
 
@@ -1180,224 +1186,188 @@ SWIGEXPORT void SWIGSTDCALL CSharp_delete_OTPassword(void * jarg1) {
 }
 
 
-SWIGEXPORT void * SWIGSTDCALL CSharp_new_OTCallback() {
+SWIGEXPORT void * SWIGSTDCALL CSharp_new_SwigPasswordCallback() {
   void * jresult ;
-  OTCallback *result = 0 ;
+  SwigPasswordCallback *result = 0 ;
   
-  result = (OTCallback *)new SwigDirector_OTCallback();
+  result = (SwigPasswordCallback *)new SwigDirector_SwigPasswordCallback();
   jresult = (void *)result; 
   return jresult;
 }
 
 
-SWIGEXPORT void SWIGSTDCALL CSharp_delete_OTCallback(void * jarg1) {
-  OTCallback *arg1 = (OTCallback *) 0 ;
+SWIGEXPORT void SWIGSTDCALL CSharp_delete_SwigPasswordCallback(void * jarg1) {
+  SwigPasswordCallback *arg1 = (SwigPasswordCallback *) 0 ;
   
-  arg1 = (OTCallback *)jarg1; 
+  arg1 = (SwigPasswordCallback *)jarg1; 
   delete arg1;
 }
 
 
-SWIGEXPORT void SWIGSTDCALL CSharp_OTCallback_runOne(void * jarg1, char * jarg2, void * jarg3) {
-  OTCallback *arg1 = (OTCallback *) 0 ;
-  char *arg2 = (char *) 0 ;
-  OTPassword *arg3 = 0 ;
-  
-  arg1 = (OTCallback *)jarg1; 
-  arg2 = (char *)jarg2; 
-  arg3 = (OTPassword *)jarg3;
-  if (!arg3) {
-    SWIG_CSharpSetPendingExceptionArgument(SWIG_CSharpArgumentNullException, "OTPassword & type is null", 0);
-    return ;
-  } 
-  (arg1)->runOne((char const *)arg2,*arg3);
-}
-
-
-SWIGEXPORT void SWIGSTDCALL CSharp_OTCallback_runOneSwigExplicitOTCallback(void * jarg1, char * jarg2, void * jarg3) {
-  OTCallback *arg1 = (OTCallback *) 0 ;
-  char *arg2 = (char *) 0 ;
-  OTPassword *arg3 = 0 ;
-  
-  arg1 = (OTCallback *)jarg1; 
-  arg2 = (char *)jarg2; 
-  arg3 = (OTPassword *)jarg3;
-  if (!arg3) {
-    SWIG_CSharpSetPendingExceptionArgument(SWIG_CSharpArgumentNullException, "OTPassword & type is null", 0);
-    return ;
-  } 
-  (arg1)->OTCallback::runOne((char const *)arg2,*arg3);
-}
-
-
-SWIGEXPORT void SWIGSTDCALL CSharp_OTCallback_runTwo(void * jarg1, char * jarg2, void * jarg3) {
-  OTCallback *arg1 = (OTCallback *) 0 ;
-  char *arg2 = (char *) 0 ;
-  OTPassword *arg3 = 0 ;
-  
-  arg1 = (OTCallback *)jarg1; 
-  arg2 = (char *)jarg2; 
-  arg3 = (OTPassword *)jarg3;
-  if (!arg3) {
-    SWIG_CSharpSetPendingExceptionArgument(SWIG_CSharpArgumentNullException, "OTPassword & type is null", 0);
-    return ;
-  } 
-  (arg1)->runTwo((char const *)arg2,*arg3);
-}
-
-
-SWIGEXPORT void SWIGSTDCALL CSharp_OTCallback_runTwoSwigExplicitOTCallback(void * jarg1, char * jarg2, void * jarg3) {
-  OTCallback *arg1 = (OTCallback *) 0 ;
-  char *arg2 = (char *) 0 ;
-  OTPassword *arg3 = 0 ;
-  
-  arg1 = (OTCallback *)jarg1; 
-  arg2 = (char *)jarg2; 
-  arg3 = (OTPassword *)jarg3;
-  if (!arg3) {
-    SWIG_CSharpSetPendingExceptionArgument(SWIG_CSharpArgumentNullException, "OTPassword & type is null", 0);
-    return ;
-  } 
-  (arg1)->OTCallback::runTwo((char const *)arg2,*arg3);
-}
-
-
-SWIGEXPORT void SWIGSTDCALL CSharp_OTCallback_director_connect(void *objarg, SwigDirector_OTCallback::SWIG_Callback0_t callback0, SwigDirector_OTCallback::SWIG_Callback1_t callback1) {
-  OTCallback *obj = (OTCallback *)objarg;
-  SwigDirector_OTCallback *director = dynamic_cast<SwigDirector_OTCallback *>(obj);
-  if (director) {
-    director->swig_connect_director(callback0, callback1);
-  }
-}
-
-
-SWIGEXPORT void * SWIGSTDCALL CSharp_new_OTCaller() {
-  void * jresult ;
-  OTCaller *result = 0 ;
-  
-  result = (OTCaller *)new OTCaller();
-  jresult = (void *)result; 
-  return jresult;
-}
-
-
-SWIGEXPORT void SWIGSTDCALL CSharp_delete_OTCaller(void * jarg1) {
-  OTCaller *arg1 = (OTCaller *) 0 ;
-  
-  arg1 = (OTCaller *)jarg1; 
-  delete arg1;
-}
-
-
-SWIGEXPORT unsigned int SWIGSTDCALL CSharp_OTCaller_GetPassword(void * jarg1, void * jarg2) {
+SWIGEXPORT unsigned int SWIGSTDCALL CSharp_SwigPasswordCallback_SwigGetPassword(void * jarg1, void * jarg2, char * jarg3) {
   unsigned int jresult ;
-  OTCaller *arg1 = (OTCaller *) 0 ;
+  SwigPasswordCallback *arg1 = (SwigPasswordCallback *) 0 ;
   OTPassword *arg2 = 0 ;
+  std::string *arg3 = 0 ;
   bool result;
   
-  arg1 = (OTCaller *)jarg1; 
+  arg1 = (SwigPasswordCallback *)jarg1; 
   arg2 = (OTPassword *)jarg2;
   if (!arg2) {
     SWIG_CSharpSetPendingExceptionArgument(SWIG_CSharpArgumentNullException, "OTPassword & type is null", 0);
     return 0;
   } 
-  result = (bool)((OTCaller const *)arg1)->GetPassword(*arg2);
+  if (!jarg3) {
+    SWIG_CSharpSetPendingExceptionArgument(SWIG_CSharpArgumentNullException, "null string", 0);
+    return 0;
+  }
+  std::string arg3_str(jarg3);
+  arg3 = &arg3_str; 
+  result = (bool)(arg1)->SwigGetPassword(*arg2,(std::string const &)*arg3);
   jresult = result; 
   return jresult;
 }
 
 
-SWIGEXPORT void SWIGSTDCALL CSharp_OTCaller_ZeroOutPassword(void * jarg1) {
-  OTCaller *arg1 = (OTCaller *) 0 ;
-  
-  arg1 = (OTCaller *)jarg1; 
-  (arg1)->ZeroOutPassword();
-}
-
-
-SWIGEXPORT char * SWIGSTDCALL CSharp_OTCaller_GetDisplay(void * jarg1) {
-  char * jresult ;
-  OTCaller *arg1 = (OTCaller *) 0 ;
-  char *result = 0 ;
-  
-  arg1 = (OTCaller *)jarg1; 
-  result = (char *)((OTCaller const *)arg1)->GetDisplay();
-  jresult = SWIG_csharp_string_callback((const char *)result); 
-  return jresult;
-}
-
-
-SWIGEXPORT void SWIGSTDCALL CSharp_OTCaller_SetDisplay(void * jarg1, char * jarg2, int jarg3) {
-  OTCaller *arg1 = (OTCaller *) 0 ;
-  char *arg2 = (char *) 0 ;
-  int arg3 ;
-  
-  arg1 = (OTCaller *)jarg1; 
-  arg2 = (char *)jarg2; 
-  arg3 = (int)jarg3; 
-  (arg1)->SetDisplay((char const *)arg2,arg3);
-}
-
-
-SWIGEXPORT void SWIGSTDCALL CSharp_OTCaller_delCallback(void * jarg1) {
-  OTCaller *arg1 = (OTCaller *) 0 ;
-  
-  arg1 = (OTCaller *)jarg1; 
-  (arg1)->delCallback();
-}
-
-
-SWIGEXPORT void SWIGSTDCALL CSharp_OTCaller_setCallback(void * jarg1, void * jarg2) {
-  OTCaller *arg1 = (OTCaller *) 0 ;
-  OTCallback *arg2 = (OTCallback *) 0 ;
-  
-  arg1 = (OTCaller *)jarg1; 
-  arg2 = (OTCallback *)jarg2; 
-  (arg1)->setCallback(arg2);
-}
-
-
-SWIGEXPORT unsigned int SWIGSTDCALL CSharp_OTCaller_isCallbackSet(void * jarg1) {
+SWIGEXPORT unsigned int SWIGSTDCALL CSharp_SwigPasswordCallback_SwigGetPasswordSwigExplicitSwigPasswordCallback(void * jarg1, void * jarg2, char * jarg3) {
   unsigned int jresult ;
-  OTCaller *arg1 = (OTCaller *) 0 ;
+  SwigPasswordCallback *arg1 = (SwigPasswordCallback *) 0 ;
+  OTPassword *arg2 = 0 ;
+  std::string *arg3 = 0 ;
   bool result;
   
-  arg1 = (OTCaller *)jarg1; 
-  result = (bool)((OTCaller const *)arg1)->isCallbackSet();
-  jresult = result; 
-  return jresult;
-}
-
-
-SWIGEXPORT void SWIGSTDCALL CSharp_OTCaller_callOne(void * jarg1) {
-  OTCaller *arg1 = (OTCaller *) 0 ;
-  
-  arg1 = (OTCaller *)jarg1; 
-  (arg1)->callOne();
-}
-
-
-SWIGEXPORT void SWIGSTDCALL CSharp_OTCaller_callTwo(void * jarg1) {
-  OTCaller *arg1 = (OTCaller *) 0 ;
-  
-  arg1 = (OTCaller *)jarg1; 
-  (arg1)->callTwo();
-}
-
-
-SWIGEXPORT unsigned int SWIGSTDCALL CSharp_OT_API_Set_PasswordCallback(void * jarg1) {
-  unsigned int jresult ;
-  OTCaller *arg1 = 0 ;
-  bool result;
-  
-  arg1 = (OTCaller *)jarg1;
-  if (!arg1) {
-    SWIG_CSharpSetPendingExceptionArgument(SWIG_CSharpArgumentNullException, "OTCaller & type is null", 0);
+  arg1 = (SwigPasswordCallback *)jarg1; 
+  arg2 = (OTPassword *)jarg2;
+  if (!arg2) {
+    SWIG_CSharpSetPendingExceptionArgument(SWIG_CSharpArgumentNullException, "OTPassword & type is null", 0);
     return 0;
   } 
-  result = (bool)OT_API_Set_PasswordCallback(*arg1);
+  if (!jarg3) {
+    SWIG_CSharpSetPendingExceptionArgument(SWIG_CSharpArgumentNullException, "null string", 0);
+    return 0;
+  }
+  std::string arg3_str(jarg3);
+  arg3 = &arg3_str; 
+  result = (bool)(arg1)->SwigPasswordCallback::SwigGetPassword(*arg2,(std::string const &)*arg3);
   jresult = result; 
   return jresult;
+}
+
+
+SWIGEXPORT unsigned int SWIGSTDCALL CSharp_SwigPasswordCallback_SwigNewPassword(void * jarg1, void * jarg2, char * jarg3) {
+  unsigned int jresult ;
+  SwigPasswordCallback *arg1 = (SwigPasswordCallback *) 0 ;
+  OTPassword *arg2 = 0 ;
+  std::string *arg3 = 0 ;
+  bool result;
+  
+  arg1 = (SwigPasswordCallback *)jarg1; 
+  arg2 = (OTPassword *)jarg2;
+  if (!arg2) {
+    SWIG_CSharpSetPendingExceptionArgument(SWIG_CSharpArgumentNullException, "OTPassword & type is null", 0);
+    return 0;
+  } 
+  if (!jarg3) {
+    SWIG_CSharpSetPendingExceptionArgument(SWIG_CSharpArgumentNullException, "null string", 0);
+    return 0;
+  }
+  std::string arg3_str(jarg3);
+  arg3 = &arg3_str; 
+  result = (bool)(arg1)->SwigNewPassword(*arg2,(std::string const &)*arg3);
+  jresult = result; 
+  return jresult;
+}
+
+
+SWIGEXPORT unsigned int SWIGSTDCALL CSharp_SwigPasswordCallback_SwigNewPasswordSwigExplicitSwigPasswordCallback(void * jarg1, void * jarg2, char * jarg3) {
+  unsigned int jresult ;
+  SwigPasswordCallback *arg1 = (SwigPasswordCallback *) 0 ;
+  OTPassword *arg2 = 0 ;
+  std::string *arg3 = 0 ;
+  bool result;
+  
+  arg1 = (SwigPasswordCallback *)jarg1; 
+  arg2 = (OTPassword *)jarg2;
+  if (!arg2) {
+    SWIG_CSharpSetPendingExceptionArgument(SWIG_CSharpArgumentNullException, "OTPassword & type is null", 0);
+    return 0;
+  } 
+  if (!jarg3) {
+    SWIG_CSharpSetPendingExceptionArgument(SWIG_CSharpArgumentNullException, "null string", 0);
+    return 0;
+  }
+  std::string arg3_str(jarg3);
+  arg3 = &arg3_str; 
+  result = (bool)(arg1)->SwigPasswordCallback::SwigNewPassword(*arg2,(std::string const &)*arg3);
+  jresult = result; 
+  return jresult;
+}
+
+
+SWIGEXPORT unsigned int SWIGSTDCALL CSharp_SwigPasswordCallback_GetPassword(void * jarg1, char * jarg2) {
+  unsigned int jresult ;
+  OTPassword *arg1 = 0 ;
+  std::string *arg2 = 0 ;
+  bool result;
+  
+  arg1 = (OTPassword *)jarg1;
+  if (!arg1) {
+    SWIG_CSharpSetPendingExceptionArgument(SWIG_CSharpArgumentNullException, "OTPassword & type is null", 0);
+    return 0;
+  } 
+  if (!jarg2) {
+    SWIG_CSharpSetPendingExceptionArgument(SWIG_CSharpArgumentNullException, "null string", 0);
+    return 0;
+  }
+  std::string arg2_str(jarg2);
+  arg2 = &arg2_str; 
+  result = (bool)SwigPasswordCallback::GetPassword(*arg1,(std::string const &)*arg2);
+  jresult = result; 
+  return jresult;
+}
+
+
+SWIGEXPORT unsigned int SWIGSTDCALL CSharp_SwigPasswordCallback_NewPassword(void * jarg1, char * jarg2) {
+  unsigned int jresult ;
+  OTPassword *arg1 = 0 ;
+  std::string *arg2 = 0 ;
+  bool result;
+  
+  arg1 = (OTPassword *)jarg1;
+  if (!arg1) {
+    SWIG_CSharpSetPendingExceptionArgument(SWIG_CSharpArgumentNullException, "OTPassword & type is null", 0);
+    return 0;
+  } 
+  if (!jarg2) {
+    SWIG_CSharpSetPendingExceptionArgument(SWIG_CSharpArgumentNullException, "null string", 0);
+    return 0;
+  }
+  std::string arg2_str(jarg2);
+  arg2 = &arg2_str; 
+  result = (bool)SwigPasswordCallback::NewPassword(*arg1,(std::string const &)*arg2);
+  jresult = result; 
+  return jresult;
+}
+
+
+SWIGEXPORT unsigned int SWIGSTDCALL CSharp_SwigPasswordCallback_SetCallback(void * jarg1) {
+  unsigned int jresult ;
+  SwigPasswordCallback *arg1 = (SwigPasswordCallback *) 0 ;
+  bool result;
+  
+  arg1 = (SwigPasswordCallback *)jarg1; 
+  result = (bool)SwigPasswordCallback::SetCallback(arg1);
+  jresult = result; 
+  return jresult;
+}
+
+
+SWIGEXPORT void SWIGSTDCALL CSharp_SwigPasswordCallback_director_connect(void *objarg, SwigDirector_SwigPasswordCallback::SWIG_Callback0_t callback0, SwigDirector_SwigPasswordCallback::SWIG_Callback1_t callback1) {
+  SwigPasswordCallback *obj = (SwigPasswordCallback *)objarg;
+  SwigDirector_SwigPasswordCallback *director = dynamic_cast<SwigDirector_SwigPasswordCallback *>(obj);
+  if (director) {
+    director->swig_connect_director(callback0, callback1);
+  }
 }
 
 
@@ -8564,6 +8534,18 @@ SWIGEXPORT void * SWIGSTDCALL CSharp_Storable_ot_dynamic_cast(void * jarg1) {
 }
 
 
+SWIGEXPORT void * SWIGSTDCALL CSharp_Storable_ot_dynamic_cast_box(void * jarg1) {
+  void * jresult ;
+  OTDB::Storable *arg1 = (OTDB::Storable *) 0 ;
+  OTDB::Storable *result = 0 ;
+  
+  arg1 = (OTDB::Storable *)jarg1; 
+  result = (OTDB::Storable *)OTDB::Storable::ot_dynamic_cast_box(arg1);
+  jresult = (void *)result; 
+  return jresult;
+}
+
+
 SWIGEXPORT void * SWIGSTDCALL CSharp_Storage_GetPacker__SWIG_0(void * jarg1, int jarg2) {
   void * jresult ;
   OTDB::Storage *arg1 = (OTDB::Storage *) 0 ;
@@ -10713,6 +10695,18 @@ SWIGEXPORT void * SWIGSTDCALL CSharp_OTDBString_ot_dynamic_cast(void * jarg1) {
 }
 
 
+SWIGEXPORT void * SWIGSTDCALL CSharp_OTDBString_ot_dynamic_cast_box(void * jarg1) {
+  void * jresult ;
+  OTDB::OTDBString *arg1 = (OTDB::OTDBString *) 0 ;
+  OTDB::Storable *result = 0 ;
+  
+  arg1 = (OTDB::OTDBString *)jarg1; 
+  result = (OTDB::Storable *)OTDB::OTDBString::ot_dynamic_cast_box(arg1);
+  jresult = (void *)result; 
+  return jresult;
+}
+
+
 SWIGEXPORT void SWIGSTDCALL CSharp_delete_Blob(void * jarg1) {
   OTDB::Blob *arg1 = (OTDB::Blob *) 0 ;
   
@@ -10756,6 +10750,18 @@ SWIGEXPORT void * SWIGSTDCALL CSharp_Blob_ot_dynamic_cast(void * jarg1) {
   
   arg1 = (OTDB::Storable *)jarg1; 
   result = (OTDB::Blob *)OTDB::Blob::ot_dynamic_cast(arg1);
+  jresult = (void *)result; 
+  return jresult;
+}
+
+
+SWIGEXPORT void * SWIGSTDCALL CSharp_Blob_ot_dynamic_cast_box(void * jarg1) {
+  void * jresult ;
+  OTDB::Blob *arg1 = (OTDB::Blob *) 0 ;
+  OTDB::Storable *result = 0 ;
+  
+  arg1 = (OTDB::Blob *)jarg1; 
+  result = (OTDB::Storable *)OTDB::Blob::ot_dynamic_cast_box(arg1);
   jresult = (void *)result; 
   return jresult;
 }
@@ -10844,6 +10850,18 @@ SWIGEXPORT void * SWIGSTDCALL CSharp_StringMap_ot_dynamic_cast(void * jarg1) {
 }
 
 
+SWIGEXPORT void * SWIGSTDCALL CSharp_StringMap_ot_dynamic_cast_box(void * jarg1) {
+  void * jresult ;
+  OTDB::StringMap *arg1 = (OTDB::StringMap *) 0 ;
+  OTDB::Storable *result = 0 ;
+  
+  arg1 = (OTDB::StringMap *)jarg1; 
+  result = (OTDB::Storable *)OTDB::StringMap::ot_dynamic_cast_box(arg1);
+  jresult = (void *)result; 
+  return jresult;
+}
+
+
 SWIGEXPORT void SWIGSTDCALL CSharp_delete_Displayable(void * jarg1) {
   OTDB::Displayable *arg1 = (OTDB::Displayable *) 0 ;
   
@@ -10886,6 +10904,18 @@ SWIGEXPORT void * SWIGSTDCALL CSharp_Displayable_ot_dynamic_cast(void * jarg1) {
   
   arg1 = (OTDB::Storable *)jarg1; 
   result = (OTDB::Displayable *)OTDB::Displayable::ot_dynamic_cast(arg1);
+  jresult = (void *)result; 
+  return jresult;
+}
+
+
+SWIGEXPORT void * SWIGSTDCALL CSharp_Displayable_ot_dynamic_cast_box(void * jarg1) {
+  void * jresult ;
+  OTDB::Displayable *arg1 = (OTDB::Displayable *) 0 ;
+  OTDB::Storable *result = 0 ;
+  
+  arg1 = (OTDB::Displayable *)jarg1; 
+  result = (OTDB::Storable *)OTDB::Displayable::ot_dynamic_cast_box(arg1);
   jresult = (void *)result; 
   return jresult;
 }
@@ -11370,6 +11400,18 @@ SWIGEXPORT void * SWIGSTDCALL CSharp_MarketData_ot_dynamic_cast(void * jarg1) {
 }
 
 
+SWIGEXPORT void * SWIGSTDCALL CSharp_MarketData_ot_dynamic_cast_box(void * jarg1) {
+  void * jresult ;
+  OTDB::MarketData *arg1 = (OTDB::MarketData *) 0 ;
+  OTDB::Storable *result = 0 ;
+  
+  arg1 = (OTDB::MarketData *)jarg1; 
+  result = (OTDB::Storable *)OTDB::MarketData::ot_dynamic_cast_box(arg1);
+  jresult = (void *)result; 
+  return jresult;
+}
+
+
 SWIGEXPORT void SWIGSTDCALL CSharp_delete_MarketList(void * jarg1) {
   OTDB::MarketList *arg1 = (OTDB::MarketList *) 0 ;
   
@@ -11443,6 +11485,18 @@ SWIGEXPORT void * SWIGSTDCALL CSharp_MarketList_ot_dynamic_cast(void * jarg1) {
   
   arg1 = (OTDB::Storable *)jarg1; 
   result = (OTDB::MarketList *)OTDB::MarketList::ot_dynamic_cast(arg1);
+  jresult = (void *)result; 
+  return jresult;
+}
+
+
+SWIGEXPORT void * SWIGSTDCALL CSharp_MarketList_ot_dynamic_cast_box(void * jarg1) {
+  void * jresult ;
+  OTDB::MarketList *arg1 = (OTDB::MarketList *) 0 ;
+  OTDB::Storable *result = 0 ;
+  
+  arg1 = (OTDB::MarketList *)jarg1; 
+  result = (OTDB::Storable *)OTDB::MarketList::ot_dynamic_cast_box(arg1);
   jresult = (void *)result; 
   return jresult;
 }
@@ -11603,6 +11657,18 @@ SWIGEXPORT void * SWIGSTDCALL CSharp_OfferDataMarket_ot_dynamic_cast(void * jarg
 }
 
 
+SWIGEXPORT void * SWIGSTDCALL CSharp_OfferDataMarket_ot_dynamic_cast_box(void * jarg1) {
+  void * jresult ;
+  OTDB::OfferDataMarket *arg1 = (OTDB::OfferDataMarket *) 0 ;
+  OTDB::Storable *result = 0 ;
+  
+  arg1 = (OTDB::OfferDataMarket *)jarg1; 
+  result = (OTDB::Storable *)OTDB::OfferDataMarket::ot_dynamic_cast_box(arg1);
+  jresult = (void *)result; 
+  return jresult;
+}
+
+
 SWIGEXPORT void SWIGSTDCALL CSharp_delete_BidData(void * jarg1) {
   OTDB::BidData *arg1 = (OTDB::BidData *) 0 ;
   
@@ -11753,6 +11819,18 @@ SWIGEXPORT void * SWIGSTDCALL CSharp_BidData_ot_dynamic_cast(void * jarg1) {
   
   arg1 = (OTDB::Storable *)jarg1; 
   result = (OTDB::BidData *)OTDB::BidData::ot_dynamic_cast(arg1);
+  jresult = (void *)result; 
+  return jresult;
+}
+
+
+SWIGEXPORT void * SWIGSTDCALL CSharp_BidData_ot_dynamic_cast_box(void * jarg1) {
+  void * jresult ;
+  OTDB::BidData *arg1 = (OTDB::BidData *) 0 ;
+  OTDB::Storable *result = 0 ;
+  
+  arg1 = (OTDB::BidData *)jarg1; 
+  result = (OTDB::Storable *)OTDB::BidData::ot_dynamic_cast_box(arg1);
   jresult = (void *)result; 
   return jresult;
 }
@@ -11913,6 +11991,18 @@ SWIGEXPORT void * SWIGSTDCALL CSharp_AskData_ot_dynamic_cast(void * jarg1) {
 }
 
 
+SWIGEXPORT void * SWIGSTDCALL CSharp_AskData_ot_dynamic_cast_box(void * jarg1) {
+  void * jresult ;
+  OTDB::AskData *arg1 = (OTDB::AskData *) 0 ;
+  OTDB::Storable *result = 0 ;
+  
+  arg1 = (OTDB::AskData *)jarg1; 
+  result = (OTDB::Storable *)OTDB::AskData::ot_dynamic_cast_box(arg1);
+  jresult = (void *)result; 
+  return jresult;
+}
+
+
 SWIGEXPORT void SWIGSTDCALL CSharp_delete_OfferListMarket(void * jarg1) {
   OTDB::OfferListMarket *arg1 = (OTDB::OfferListMarket *) 0 ;
   
@@ -12044,6 +12134,18 @@ SWIGEXPORT void * SWIGSTDCALL CSharp_OfferListMarket_ot_dynamic_cast(void * jarg
   
   arg1 = (OTDB::Storable *)jarg1; 
   result = (OTDB::OfferListMarket *)OTDB::OfferListMarket::ot_dynamic_cast(arg1);
+  jresult = (void *)result; 
+  return jresult;
+}
+
+
+SWIGEXPORT void * SWIGSTDCALL CSharp_OfferListMarket_ot_dynamic_cast_box(void * jarg1) {
+  void * jresult ;
+  OTDB::OfferListMarket *arg1 = (OTDB::OfferListMarket *) 0 ;
+  OTDB::Storable *result = 0 ;
+  
+  arg1 = (OTDB::OfferListMarket *)jarg1; 
+  result = (OTDB::Storable *)OTDB::OfferListMarket::ot_dynamic_cast_box(arg1);
   jresult = (void *)result; 
   return jresult;
 }
@@ -12204,6 +12306,18 @@ SWIGEXPORT void * SWIGSTDCALL CSharp_TradeDataMarket_ot_dynamic_cast(void * jarg
 }
 
 
+SWIGEXPORT void * SWIGSTDCALL CSharp_TradeDataMarket_ot_dynamic_cast_box(void * jarg1) {
+  void * jresult ;
+  OTDB::TradeDataMarket *arg1 = (OTDB::TradeDataMarket *) 0 ;
+  OTDB::Storable *result = 0 ;
+  
+  arg1 = (OTDB::TradeDataMarket *)jarg1; 
+  result = (OTDB::Storable *)OTDB::TradeDataMarket::ot_dynamic_cast_box(arg1);
+  jresult = (void *)result; 
+  return jresult;
+}
+
+
 SWIGEXPORT void SWIGSTDCALL CSharp_delete_TradeListMarket(void * jarg1) {
   OTDB::TradeListMarket *arg1 = (OTDB::TradeListMarket *) 0 ;
   
@@ -12277,6 +12391,18 @@ SWIGEXPORT void * SWIGSTDCALL CSharp_TradeListMarket_ot_dynamic_cast(void * jarg
   
   arg1 = (OTDB::Storable *)jarg1; 
   result = (OTDB::TradeListMarket *)OTDB::TradeListMarket::ot_dynamic_cast(arg1);
+  jresult = (void *)result; 
+  return jresult;
+}
+
+
+SWIGEXPORT void * SWIGSTDCALL CSharp_TradeListMarket_ot_dynamic_cast_box(void * jarg1) {
+  void * jresult ;
+  OTDB::TradeListMarket *arg1 = (OTDB::TradeListMarket *) 0 ;
+  OTDB::Storable *result = 0 ;
+  
+  arg1 = (OTDB::TradeListMarket *)jarg1; 
+  result = (OTDB::Storable *)OTDB::TradeListMarket::ot_dynamic_cast_box(arg1);
   jresult = (void *)result; 
   return jresult;
 }
@@ -12756,6 +12882,18 @@ SWIGEXPORT void * SWIGSTDCALL CSharp_OfferDataNym_ot_dynamic_cast(void * jarg1) 
 }
 
 
+SWIGEXPORT void * SWIGSTDCALL CSharp_OfferDataNym_ot_dynamic_cast_box(void * jarg1) {
+  void * jresult ;
+  OTDB::OfferDataNym *arg1 = (OTDB::OfferDataNym *) 0 ;
+  OTDB::Storable *result = 0 ;
+  
+  arg1 = (OTDB::OfferDataNym *)jarg1; 
+  result = (OTDB::Storable *)OTDB::OfferDataNym::ot_dynamic_cast_box(arg1);
+  jresult = (void *)result; 
+  return jresult;
+}
+
+
 SWIGEXPORT void SWIGSTDCALL CSharp_delete_OfferListNym(void * jarg1) {
   OTDB::OfferListNym *arg1 = (OTDB::OfferListNym *) 0 ;
   
@@ -12829,6 +12967,18 @@ SWIGEXPORT void * SWIGSTDCALL CSharp_OfferListNym_ot_dynamic_cast(void * jarg1) 
   
   arg1 = (OTDB::Storable *)jarg1; 
   result = (OTDB::OfferListNym *)OTDB::OfferListNym::ot_dynamic_cast(arg1);
+  jresult = (void *)result; 
+  return jresult;
+}
+
+
+SWIGEXPORT void * SWIGSTDCALL CSharp_OfferListNym_ot_dynamic_cast_box(void * jarg1) {
+  void * jresult ;
+  OTDB::OfferListNym *arg1 = (OTDB::OfferListNym *) 0 ;
+  OTDB::Storable *result = 0 ;
+  
+  arg1 = (OTDB::OfferListNym *)jarg1; 
+  result = (OTDB::Storable *)OTDB::OfferListNym::ot_dynamic_cast_box(arg1);
   jresult = (void *)result; 
   return jresult;
 }
@@ -13016,6 +13166,18 @@ SWIGEXPORT void * SWIGSTDCALL CSharp_TradeDataNym_ot_dynamic_cast(void * jarg1) 
 }
 
 
+SWIGEXPORT void * SWIGSTDCALL CSharp_TradeDataNym_ot_dynamic_cast_box(void * jarg1) {
+  void * jresult ;
+  OTDB::TradeDataNym *arg1 = (OTDB::TradeDataNym *) 0 ;
+  OTDB::Storable *result = 0 ;
+  
+  arg1 = (OTDB::TradeDataNym *)jarg1; 
+  result = (OTDB::Storable *)OTDB::TradeDataNym::ot_dynamic_cast_box(arg1);
+  jresult = (void *)result; 
+  return jresult;
+}
+
+
 SWIGEXPORT void SWIGSTDCALL CSharp_delete_TradeListNym(void * jarg1) {
   OTDB::TradeListNym *arg1 = (OTDB::TradeListNym *) 0 ;
   
@@ -13089,6 +13251,18 @@ SWIGEXPORT void * SWIGSTDCALL CSharp_TradeListNym_ot_dynamic_cast(void * jarg1) 
   
   arg1 = (OTDB::Storable *)jarg1; 
   result = (OTDB::TradeListNym *)OTDB::TradeListNym::ot_dynamic_cast(arg1);
+  jresult = (void *)result; 
+  return jresult;
+}
+
+
+SWIGEXPORT void * SWIGSTDCALL CSharp_TradeListNym_ot_dynamic_cast_box(void * jarg1) {
+  void * jresult ;
+  OTDB::TradeListNym *arg1 = (OTDB::TradeListNym *) 0 ;
+  OTDB::Storable *result = 0 ;
+  
+  arg1 = (OTDB::TradeListNym *)jarg1; 
+  result = (OTDB::Storable *)OTDB::TradeListNym::ot_dynamic_cast_box(arg1);
   jresult = (void *)result; 
   return jresult;
 }
@@ -13190,6 +13364,18 @@ SWIGEXPORT void * SWIGSTDCALL CSharp_Acct_ot_dynamic_cast(void * jarg1) {
   
   arg1 = (OTDB::Storable *)jarg1; 
   result = (OTDB::Acct *)OTDB::Acct::ot_dynamic_cast(arg1);
+  jresult = (void *)result; 
+  return jresult;
+}
+
+
+SWIGEXPORT void * SWIGSTDCALL CSharp_Acct_ot_dynamic_cast_box(void * jarg1) {
+  void * jresult ;
+  OTDB::Acct *arg1 = (OTDB::Acct *) 0 ;
+  OTDB::Storable *result = 0 ;
+  
+  arg1 = (OTDB::Acct *)jarg1; 
+  result = (OTDB::Storable *)OTDB::Acct::ot_dynamic_cast_box(arg1);
   jresult = (void *)result; 
   return jresult;
 }
@@ -13323,6 +13509,18 @@ SWIGEXPORT void * SWIGSTDCALL CSharp_BitcoinAcct_ot_dynamic_cast(void * jarg1) {
 }
 
 
+SWIGEXPORT void * SWIGSTDCALL CSharp_BitcoinAcct_ot_dynamic_cast_box(void * jarg1) {
+  void * jresult ;
+  OTDB::BitcoinAcct *arg1 = (OTDB::BitcoinAcct *) 0 ;
+  OTDB::Storable *result = 0 ;
+  
+  arg1 = (OTDB::BitcoinAcct *)jarg1; 
+  result = (OTDB::Storable *)OTDB::BitcoinAcct::ot_dynamic_cast_box(arg1);
+  jresult = (void *)result; 
+  return jresult;
+}
+
+
 SWIGEXPORT void SWIGSTDCALL CSharp_delete_ServerInfo(void * jarg1) {
   OTDB::ServerInfo *arg1 = (OTDB::ServerInfo *) 0 ;
   
@@ -13419,6 +13617,18 @@ SWIGEXPORT void * SWIGSTDCALL CSharp_ServerInfo_ot_dynamic_cast(void * jarg1) {
   
   arg1 = (OTDB::Storable *)jarg1; 
   result = (OTDB::ServerInfo *)OTDB::ServerInfo::ot_dynamic_cast(arg1);
+  jresult = (void *)result; 
+  return jresult;
+}
+
+
+SWIGEXPORT void * SWIGSTDCALL CSharp_ServerInfo_ot_dynamic_cast_box(void * jarg1) {
+  void * jresult ;
+  OTDB::ServerInfo *arg1 = (OTDB::ServerInfo *) 0 ;
+  OTDB::Storable *result = 0 ;
+  
+  arg1 = (OTDB::ServerInfo *)jarg1; 
+  result = (OTDB::Storable *)OTDB::ServerInfo::ot_dynamic_cast_box(arg1);
   jresult = (void *)result; 
   return jresult;
 }
@@ -13574,6 +13784,18 @@ SWIGEXPORT void * SWIGSTDCALL CSharp_Server_ot_dynamic_cast(void * jarg1) {
   
   arg1 = (OTDB::Storable *)jarg1; 
   result = (OTDB::Server *)OTDB::Server::ot_dynamic_cast(arg1);
+  jresult = (void *)result; 
+  return jresult;
+}
+
+
+SWIGEXPORT void * SWIGSTDCALL CSharp_Server_ot_dynamic_cast_box(void * jarg1) {
+  void * jresult ;
+  OTDB::Server *arg1 = (OTDB::Server *) 0 ;
+  OTDB::Storable *result = 0 ;
+  
+  arg1 = (OTDB::Server *)jarg1; 
+  result = (OTDB::Storable *)OTDB::Server::ot_dynamic_cast_box(arg1);
   jresult = (void *)result; 
   return jresult;
 }
@@ -13783,6 +14005,18 @@ SWIGEXPORT void * SWIGSTDCALL CSharp_BitcoinServer_ot_dynamic_cast(void * jarg1)
   
   arg1 = (OTDB::Storable *)jarg1; 
   result = (OTDB::BitcoinServer *)OTDB::BitcoinServer::ot_dynamic_cast(arg1);
+  jresult = (void *)result; 
+  return jresult;
+}
+
+
+SWIGEXPORT void * SWIGSTDCALL CSharp_BitcoinServer_ot_dynamic_cast_box(void * jarg1) {
+  void * jresult ;
+  OTDB::BitcoinServer *arg1 = (OTDB::BitcoinServer *) 0 ;
+  OTDB::Storable *result = 0 ;
+  
+  arg1 = (OTDB::BitcoinServer *)jarg1; 
+  result = (OTDB::Storable *)OTDB::BitcoinServer::ot_dynamic_cast_box(arg1);
   jresult = (void *)result; 
   return jresult;
 }
@@ -14051,6 +14285,18 @@ SWIGEXPORT void * SWIGSTDCALL CSharp_RippleServer_ot_dynamic_cast(void * jarg1) 
 }
 
 
+SWIGEXPORT void * SWIGSTDCALL CSharp_RippleServer_ot_dynamic_cast_box(void * jarg1) {
+  void * jresult ;
+  OTDB::RippleServer *arg1 = (OTDB::RippleServer *) 0 ;
+  OTDB::Storable *result = 0 ;
+  
+  arg1 = (OTDB::RippleServer *)jarg1; 
+  result = (OTDB::Storable *)OTDB::RippleServer::ot_dynamic_cast_box(arg1);
+  jresult = (void *)result; 
+  return jresult;
+}
+
+
 SWIGEXPORT void SWIGSTDCALL CSharp_delete_LoomServer(void * jarg1) {
   OTDB::LoomServer *arg1 = (OTDB::LoomServer *) 0 ;
   
@@ -14255,6 +14501,18 @@ SWIGEXPORT void * SWIGSTDCALL CSharp_LoomServer_ot_dynamic_cast(void * jarg1) {
   
   arg1 = (OTDB::Storable *)jarg1; 
   result = (OTDB::LoomServer *)OTDB::LoomServer::ot_dynamic_cast(arg1);
+  jresult = (void *)result; 
+  return jresult;
+}
+
+
+SWIGEXPORT void * SWIGSTDCALL CSharp_LoomServer_ot_dynamic_cast_box(void * jarg1) {
+  void * jresult ;
+  OTDB::LoomServer *arg1 = (OTDB::LoomServer *) 0 ;
+  OTDB::Storable *result = 0 ;
+  
+  arg1 = (OTDB::LoomServer *)jarg1; 
+  result = (OTDB::Storable *)OTDB::LoomServer::ot_dynamic_cast_box(arg1);
   jresult = (void *)result; 
   return jresult;
 }
@@ -14468,6 +14726,18 @@ SWIGEXPORT void * SWIGSTDCALL CSharp_ContactNym_ot_dynamic_cast(void * jarg1) {
   
   arg1 = (OTDB::Storable *)jarg1; 
   result = (OTDB::ContactNym *)OTDB::ContactNym::ot_dynamic_cast(arg1);
+  jresult = (void *)result; 
+  return jresult;
+}
+
+
+SWIGEXPORT void * SWIGSTDCALL CSharp_ContactNym_ot_dynamic_cast_box(void * jarg1) {
+  void * jresult ;
+  OTDB::ContactNym *arg1 = (OTDB::ContactNym *) 0 ;
+  OTDB::Storable *result = 0 ;
+  
+  arg1 = (OTDB::ContactNym *)jarg1; 
+  result = (OTDB::Storable *)OTDB::ContactNym::ot_dynamic_cast_box(arg1);
   jresult = (void *)result; 
   return jresult;
 }
@@ -14725,6 +14995,18 @@ SWIGEXPORT void * SWIGSTDCALL CSharp_WalletData_ot_dynamic_cast(void * jarg1) {
 }
 
 
+SWIGEXPORT void * SWIGSTDCALL CSharp_WalletData_ot_dynamic_cast_box(void * jarg1) {
+  void * jresult ;
+  OTDB::WalletData *arg1 = (OTDB::WalletData *) 0 ;
+  OTDB::Storable *result = 0 ;
+  
+  arg1 = (OTDB::WalletData *)jarg1; 
+  result = (OTDB::Storable *)OTDB::WalletData::ot_dynamic_cast_box(arg1);
+  jresult = (void *)result; 
+  return jresult;
+}
+
+
 SWIGEXPORT void SWIGSTDCALL CSharp_delete_ContactAcct(void * jarg1) {
   OTDB::ContactAcct *arg1 = (OTDB::ContactAcct *) 0 ;
   
@@ -14956,6 +15238,18 @@ SWIGEXPORT void * SWIGSTDCALL CSharp_ContactAcct_ot_dynamic_cast(void * jarg1) {
   
   arg1 = (OTDB::Storable *)jarg1; 
   result = (OTDB::ContactAcct *)OTDB::ContactAcct::ot_dynamic_cast(arg1);
+  jresult = (void *)result; 
+  return jresult;
+}
+
+
+SWIGEXPORT void * SWIGSTDCALL CSharp_ContactAcct_ot_dynamic_cast_box(void * jarg1) {
+  void * jresult ;
+  OTDB::ContactAcct *arg1 = (OTDB::ContactAcct *) 0 ;
+  OTDB::Storable *result = 0 ;
+  
+  arg1 = (OTDB::ContactAcct *)jarg1; 
+  result = (OTDB::Storable *)OTDB::ContactAcct::ot_dynamic_cast_box(arg1);
   jresult = (void *)result; 
   return jresult;
 }
@@ -15232,6 +15526,18 @@ SWIGEXPORT void * SWIGSTDCALL CSharp_Contact_ot_dynamic_cast(void * jarg1) {
 }
 
 
+SWIGEXPORT void * SWIGSTDCALL CSharp_Contact_ot_dynamic_cast_box(void * jarg1) {
+  void * jresult ;
+  OTDB::Contact *arg1 = (OTDB::Contact *) 0 ;
+  OTDB::Storable *result = 0 ;
+  
+  arg1 = (OTDB::Contact *)jarg1; 
+  result = (OTDB::Storable *)OTDB::Contact::ot_dynamic_cast_box(arg1);
+  jresult = (void *)result; 
+  return jresult;
+}
+
+
 SWIGEXPORT void SWIGSTDCALL CSharp_delete_AddressBook(void * jarg1) {
   OTDB::AddressBook *arg1 = (OTDB::AddressBook *) 0 ;
   
@@ -15305,6 +15611,18 @@ SWIGEXPORT void * SWIGSTDCALL CSharp_AddressBook_ot_dynamic_cast(void * jarg1) {
   
   arg1 = (OTDB::Storable *)jarg1; 
   result = (OTDB::AddressBook *)OTDB::AddressBook::ot_dynamic_cast(arg1);
+  jresult = (void *)result; 
+  return jresult;
+}
+
+
+SWIGEXPORT void * SWIGSTDCALL CSharp_AddressBook_ot_dynamic_cast_box(void * jarg1) {
+  void * jresult ;
+  OTDB::AddressBook *arg1 = (OTDB::AddressBook *) 0 ;
+  OTDB::Storable *result = 0 ;
+  
+  arg1 = (OTDB::AddressBook *)jarg1; 
+  result = (OTDB::Storable *)OTDB::AddressBook::ot_dynamic_cast_box(arg1);
   jresult = (void *)result; 
   return jresult;
 }

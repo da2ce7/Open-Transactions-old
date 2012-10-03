@@ -52,4 +52,10 @@ public class Storable : IDisposable {
     return ret;
   }
 
+  public static Storable ot_dynamic_cast_box(Storable pUnboxed) {
+    IntPtr cPtr = otapiPINVOKE.Storable_ot_dynamic_cast_box(Storable.getCPtr(pUnboxed));
+    Storable ret = (cPtr == IntPtr.Zero) ? null : new Storable(cPtr, false);
+    return ret;
+  }
+
 }

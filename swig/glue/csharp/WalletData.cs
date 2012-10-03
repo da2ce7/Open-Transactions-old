@@ -133,4 +133,10 @@ public class WalletData : Storable {
     return ret;
   }
 
+  public static Storable ot_dynamic_cast_box(WalletData pUnboxed) {
+    IntPtr cPtr = otapiPINVOKE.WalletData_ot_dynamic_cast_box(WalletData.getCPtr(pUnboxed));
+    Storable ret = (cPtr == IntPtr.Zero) ? null : new Storable(cPtr, false);
+    return ret;
+  }
+
 }

@@ -15,7 +15,7 @@
 %include "typemaps.i"
 
 
-%feature("director") OTCallback;
+%feature("director") SwigPasswordCallback;
 
 %ignore OTPasswordData;
 %rename(opAssign) OTPassword::operator=;
