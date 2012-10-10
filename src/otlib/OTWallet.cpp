@@ -1690,9 +1690,13 @@ bool OTWallet::LoadWallet(const char * szFilename)
                             // as the master key globally...
                             //
                             OTMasterKey::It()->SetMasterKey(ascMasterKey);
+							if (!OTMasterKey::It()->HasCheckHash())
+								if (!OTMasterKey::It()->IsUsingSystemKeyring())
+									bNeedToSaveAgain = OTMasterKey::It()->GenerateHashCheck();
                         }
                         
                         OTLog::vOutput(1, "Loading masterKey:\n%s\n", ascMasterKey.Get());
+
                     }
                     
                     
