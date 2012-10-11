@@ -24,7 +24,7 @@ otapi_wrap::~otapi_wrap() {
 
 };
 
-static string Native (String ^% s) {
+static std::string Native (String ^% s) {
 	using namespace Runtime::InteropServices;
 
 	IntPtr p_sz(Marshal::StringToHGlobalAnsi(const_cast<String ^>(s)).ToPointer());
@@ -33,13 +33,13 @@ static string Native (String ^% s) {
 
 	const char * chars(reinterpret_cast<const char *>(l_p_sz));
 
-	string str(chars);
+	std::string str(chars);
 
 	Marshal::FreeHGlobal(IntPtr((void*)chars));
 	return str;
 };
 
-static String ^ Managed (const string& os) { return gcnew String(os.c_str()); };
+static String ^ Managed (const std::string& os) { return gcnew String(os.c_str()); };
 
 //static wstring NativeW (String ^% s) {
 //	using namespace Runtime::InteropServices;
