@@ -261,6 +261,12 @@ class OTPassword {
     return ret;
   }
 
+  public OTPassword opAssign(OTPassword rhs) {
+    OTPassword ret = new OTPassword(otapi_im.OTPassword_opAssign(cast(void*)swigCPtr, OTPassword.swigGetCPtr(rhs)), false);
+    if (otapi_im.SwigPendingException.isPending) throw otapi_im.SwigPendingException.retrieve();
+    return ret;
+  }
+
   public this(OTPassword.BlockSize theBlockSize) {
     this(otapi_im.new_OTPassword__SWIG_0(cast(int)theBlockSize), true);
   }
@@ -1786,6 +1792,16 @@ int OT_API_ProcessSockets() {
   return ret;
 }
 
+int OTDB_MESSAGE_PACK() {
+  auto ret = otapi_im.OTDB_MESSAGE_PACK_get();
+  return ret;
+}
+
+int OTDB_PROTOCOL_BUFFERS() {
+  auto ret = otapi_im.OTDB_PROTOCOL_BUFFERS_get();
+  return ret;
+}
+
 enum PackType {
   PACK_MESSAGE_PACK = 0,
   PACK_PROTOCOL_BUFFERS,
@@ -1900,15 +1916,15 @@ class Storage {
     }
   }
 
-  public SWIGTYPE_p_OTPacker GetPacker(PackType ePackType) {
+  public SWIGTYPE_p_OTDB__OTPacker GetPacker(PackType ePackType) {
     void* cPtr = otapi_im.Storage_GetPacker__SWIG_0(cast(void*)swigCPtr, cast(int)ePackType);
-    SWIGTYPE_p_OTPacker ret = (cPtr is null) ? null : new SWIGTYPE_p_OTPacker(cPtr, false);
+    SWIGTYPE_p_OTDB__OTPacker ret = (cPtr is null) ? null : new SWIGTYPE_p_OTDB__OTPacker(cPtr, false);
     return ret;
   }
 
-  public SWIGTYPE_p_OTPacker GetPacker() {
+  public SWIGTYPE_p_OTDB__OTPacker GetPacker() {
     void* cPtr = otapi_im.Storage_GetPacker__SWIG_1(cast(void*)swigCPtr);
-    SWIGTYPE_p_OTPacker ret = (cPtr is null) ? null : new SWIGTYPE_p_OTPacker(cPtr, false);
+    SWIGTYPE_p_OTDB__OTPacker ret = (cPtr is null) ? null : new SWIGTYPE_p_OTDB__OTPacker(cPtr, false);
     return ret;
   }
 
@@ -2165,6 +2181,18 @@ Storage CreateStorageContext(StorageType eStoreType) {
 Storable CreateObject(StoredObjectType eType) {
   void* cPtr = otapi_im.CreateObject(cast(int)eType);
   Storable ret = (cPtr is null) ? null : new Storable(cPtr, true);
+  return ret;
+}
+
+bool CheckVaildValues(SWIGTYPE_p_std__string strFolder, SWIGTYPE_p_std__string oneStr, SWIGTYPE_p_std__string twoStr, SWIGTYPE_p_std__string threeStr, char[] szFuncName) {
+  bool ret = otapi_im.CheckVaildValues__SWIG_0(SWIGTYPE_p_std__string.swigGetCPtr(strFolder), SWIGTYPE_p_std__string.swigGetCPtr(oneStr), SWIGTYPE_p_std__string.swigGetCPtr(twoStr), SWIGTYPE_p_std__string.swigGetCPtr(threeStr), (szFuncName ? tango.stdc.stringz.toStringz(szFuncName) : null)) ? true : false;
+  if (otapi_im.SwigPendingException.isPending) throw otapi_im.SwigPendingException.retrieve();
+  return ret;
+}
+
+bool CheckVaildValues(SWIGTYPE_p_std__string strFolder, SWIGTYPE_p_std__string oneStr, SWIGTYPE_p_std__string twoStr, SWIGTYPE_p_std__string threeStr) {
+  bool ret = otapi_im.CheckVaildValues__SWIG_1(SWIGTYPE_p_std__string.swigGetCPtr(strFolder), SWIGTYPE_p_std__string.swigGetCPtr(oneStr), SWIGTYPE_p_std__string.swigGetCPtr(twoStr), SWIGTYPE_p_std__string.swigGetCPtr(threeStr)) ? true : false;
+  if (otapi_im.SwigPendingException.isPending) throw otapi_im.SwigPendingException.retrieve();
   return ret;
 }
 
@@ -5095,6 +5123,24 @@ class SWIGTYPE_p_std__mapT_std__string_std__string_t {
   mixin otapi_im.SwigOperatorDefinitions;
 }
 
+class SWIGTYPE_p_std__string {
+  private void* swigCPtr;
+
+  public this(void* cObject, bool futureUse) {
+    swigCPtr = cObject;
+  }
+
+  protected this() {
+    swigCPtr = null;
+  }
+
+  public static void* swigGetCPtr(SWIGTYPE_p_std__string obj) {
+    return (obj is null) ? null : obj.swigCPtr;
+  }
+
+  mixin otapi_im.SwigOperatorDefinitions;
+}
+
 class SWIGTYPE_p_std__vectorT_unsigned_char_t {
   private void* swigCPtr;
 
@@ -5149,7 +5195,7 @@ class SWIGTYPE_p_uint32_t {
   mixin otapi_im.SwigOperatorDefinitions;
 }
 
-class SWIGTYPE_p_OTPacker {
+class SWIGTYPE_p_OTDB__OTPacker {
   private void* swigCPtr;
 
   public this(void* cObject, bool futureUse) {
@@ -5160,7 +5206,7 @@ class SWIGTYPE_p_OTPacker {
     swigCPtr = null;
   }
 
-  public static void* swigGetCPtr(SWIGTYPE_p_OTPacker obj) {
+  public static void* swigGetCPtr(SWIGTYPE_p_OTDB__OTPacker obj) {
     return (obj is null) ? null : obj.swigCPtr;
   }
 

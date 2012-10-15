@@ -262,6 +262,7 @@ namespace Swig {
 
 #include <string>
 #include <map>
+#define IMPORT
 #include "../../include/otlib/OTAsymmetricKey.h"
 #include "../../include/otapi/OTAPI_funcdef.h"
 #include "../../include/otlib/OTStorage.h"
@@ -269,9 +270,6 @@ namespace Swig {
 
 #include <string>
 
-
-	using namespace OTDB;
-	
 
 
 /* ---------------------------------------------------
@@ -919,6 +917,24 @@ SWIGEXPORT void * D_OTPassword_CreateTextBuffer() {
   OTPassword *result = 0 ;
   
   result = (OTPassword *)OTPassword::CreateTextBuffer();
+  jresult = (void *)result;
+  return jresult;
+}
+
+
+SWIGEXPORT void * D_OTPassword_opAssign(void * jarg1, void * jarg2) {
+  void * jresult ;
+  OTPassword *arg1 = (OTPassword *) 0 ;
+  OTPassword *arg2 = 0 ;
+  OTPassword *result = 0 ;
+  
+  arg1 = (OTPassword *)jarg1;
+  arg2 = (OTPassword *)jarg2;
+  if (!arg2) {
+    SWIG_DSetPendingException(SWIG_DIllegalArgumentException, "OTPassword const & type is null");
+    return 0;
+  } 
+  result = (OTPassword *) &(arg1)->operator =((OTPassword const &)*arg2);
   jresult = (void *)result;
   return jresult;
 }
@@ -5270,6 +5286,26 @@ SWIGEXPORT int D_OT_API_ProcessSockets() {
 }
 
 
+SWIGEXPORT int D_OTDB_MESSAGE_PACK_get() {
+  int jresult ;
+  int result;
+  
+  result = (int) 1;
+  jresult = result;
+  return jresult;
+}
+
+
+SWIGEXPORT int D_OTDB_PROTOCOL_BUFFERS_get() {
+  int jresult ;
+  int result;
+  
+  result = (int) 1;
+  jresult = result;
+  return jresult;
+}
+
+
 SWIGEXPORT void D_delete_Storable(void * jarg1) {
   OTDB::Storable *arg1 = (OTDB::Storable *) 0 ;
   
@@ -5308,11 +5344,11 @@ SWIGEXPORT void * D_Storage_GetPacker__SWIG_0(void * jarg1, int jarg2) {
   void * jresult ;
   OTDB::Storage *arg1 = (OTDB::Storage *) 0 ;
   OTDB::PackType arg2 ;
-  OTPacker *result = 0 ;
+  OTDB::OTPacker *result = 0 ;
   
   arg1 = (OTDB::Storage *)jarg1;
   arg2 = (OTDB::PackType)jarg2; 
-  result = (OTPacker *)(arg1)->GetPacker(arg2);
+  result = (OTDB::OTPacker *)(arg1)->GetPacker(arg2);
   jresult = (void *)result;
   return jresult;
 }
@@ -5321,10 +5357,10 @@ SWIGEXPORT void * D_Storage_GetPacker__SWIG_0(void * jarg1, int jarg2) {
 SWIGEXPORT void * D_Storage_GetPacker__SWIG_1(void * jarg1) {
   void * jresult ;
   OTDB::Storage *arg1 = (OTDB::Storage *) 0 ;
-  OTPacker *result = 0 ;
+  OTDB::OTPacker *result = 0 ;
   
   arg1 = (OTDB::Storage *)jarg1;
-  result = (OTPacker *)(arg1)->GetPacker();
+  result = (OTDB::OTPacker *)(arg1)->GetPacker();
   jresult = (void *)result;
   return jresult;
 }
@@ -6418,6 +6454,76 @@ SWIGEXPORT void * D_CreateObject(int jarg1) {
   arg1 = (OTDB::StoredObjectType)jarg1; 
   result = (OTDB::Storable *)OTDB::CreateObject(arg1);
   jresult = (void *)result;
+  return jresult;
+}
+
+
+SWIGEXPORT unsigned int D_CheckVaildValues__SWIG_0(void * jarg1, void * jarg2, void * jarg3, void * jarg4, char * jarg5) {
+  unsigned int jresult ;
+  std::string *arg1 = 0 ;
+  std::string *arg2 = 0 ;
+  std::string *arg3 = 0 ;
+  std::string *arg4 = 0 ;
+  char *arg5 = (char *) 0 ;
+  bool result;
+  
+  arg1 = (std::string *)jarg1;
+  if (!arg1) {
+    SWIG_DSetPendingException(SWIG_DIllegalArgumentException, "std::string & type is null");
+    return 0;
+  } 
+  arg2 = (std::string *)jarg2;
+  if (!arg2) {
+    SWIG_DSetPendingException(SWIG_DIllegalArgumentException, "std::string & type is null");
+    return 0;
+  } 
+  arg3 = (std::string *)jarg3;
+  if (!arg3) {
+    SWIG_DSetPendingException(SWIG_DIllegalArgumentException, "std::string & type is null");
+    return 0;
+  } 
+  arg4 = (std::string *)jarg4;
+  if (!arg4) {
+    SWIG_DSetPendingException(SWIG_DIllegalArgumentException, "std::string & type is null");
+    return 0;
+  } 
+  arg5 = (char *)jarg5; 
+  result = (bool)OTDB::CheckVaildValues(*arg1,*arg2,*arg3,*arg4,(char const *)arg5);
+  jresult = result;
+  return jresult;
+}
+
+
+SWIGEXPORT unsigned int D_CheckVaildValues__SWIG_1(void * jarg1, void * jarg2, void * jarg3, void * jarg4) {
+  unsigned int jresult ;
+  std::string *arg1 = 0 ;
+  std::string *arg2 = 0 ;
+  std::string *arg3 = 0 ;
+  std::string *arg4 = 0 ;
+  bool result;
+  
+  arg1 = (std::string *)jarg1;
+  if (!arg1) {
+    SWIG_DSetPendingException(SWIG_DIllegalArgumentException, "std::string & type is null");
+    return 0;
+  } 
+  arg2 = (std::string *)jarg2;
+  if (!arg2) {
+    SWIG_DSetPendingException(SWIG_DIllegalArgumentException, "std::string & type is null");
+    return 0;
+  } 
+  arg3 = (std::string *)jarg3;
+  if (!arg3) {
+    SWIG_DSetPendingException(SWIG_DIllegalArgumentException, "std::string & type is null");
+    return 0;
+  } 
+  arg4 = (std::string *)jarg4;
+  if (!arg4) {
+    SWIG_DSetPendingException(SWIG_DIllegalArgumentException, "std::string & type is null");
+    return 0;
+  } 
+  result = (bool)OTDB::CheckVaildValues(*arg1,*arg2,*arg3,*arg4);
+  jresult = result;
   return jresult;
 }
 

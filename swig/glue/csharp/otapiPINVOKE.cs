@@ -305,6 +305,9 @@ class otapiPINVOKE {
   [DllImport("otapi", EntryPoint="CSharp_OTPassword_CreateTextBuffer")]
   public static extern IntPtr OTPassword_CreateTextBuffer();
 
+  [DllImport("otapi", EntryPoint="CSharp_OTPassword_opAssign")]
+  public static extern IntPtr OTPassword_opAssign(HandleRef jarg1, HandleRef jarg2);
+
   [DllImport("otapi", EntryPoint="CSharp_new_OTPassword__SWIG_0")]
   public static extern IntPtr new_OTPassword__SWIG_0(int jarg1);
 
@@ -1187,6 +1190,12 @@ class otapiPINVOKE {
   [DllImport("otapi", EntryPoint="CSharp_OT_API_ProcessSockets")]
   public static extern int OT_API_ProcessSockets();
 
+  [DllImport("otapi", EntryPoint="CSharp_OTDB_MESSAGE_PACK_get")]
+  public static extern int OTDB_MESSAGE_PACK_get();
+
+  [DllImport("otapi", EntryPoint="CSharp_OTDB_PROTOCOL_BUFFERS_get")]
+  public static extern int OTDB_PROTOCOL_BUFFERS_get();
+
   [DllImport("otapi", EntryPoint="CSharp_delete_Storable")]
   public static extern void delete_Storable(HandleRef jarg1);
 
@@ -1330,6 +1339,12 @@ class otapiPINVOKE {
 
   [DllImport("otapi", EntryPoint="CSharp_CreateObject")]
   public static extern IntPtr CreateObject(int jarg1);
+
+  [DllImport("otapi", EntryPoint="CSharp_CheckVaildValues__SWIG_0")]
+  public static extern bool CheckVaildValues__SWIG_0(HandleRef jarg1, HandleRef jarg2, HandleRef jarg3, HandleRef jarg4, string jarg5);
+
+  [DllImport("otapi", EntryPoint="CSharp_CheckVaildValues__SWIG_1")]
+  public static extern bool CheckVaildValues__SWIG_1(HandleRef jarg1, HandleRef jarg2, HandleRef jarg3, HandleRef jarg4);
 
   [DllImport("otapi", EntryPoint="CSharp_Exists__SWIG_0")]
   public static extern bool Exists__SWIG_0(string jarg1, string jarg2, string jarg3, string jarg4);

@@ -122,6 +122,7 @@ class OTPassword(_object):
     if _newclass:safe_memcpy = staticmethod(_otapi.OTPassword_safe_memcpy)
     __swig_getmethods__["CreateTextBuffer"] = lambda x: _otapi.OTPassword_CreateTextBuffer
     if _newclass:CreateTextBuffer = staticmethod(_otapi.OTPassword_CreateTextBuffer)
+    def opAssign(self, *args): return _otapi.OTPassword_opAssign(self, *args)
     def __init__(self, *args): 
         this = _otapi.new_OTPassword(*args)
         try: self.this.append(this)
@@ -1272,6 +1273,8 @@ OT_API_ConnectServer = _otapi.OT_API_ConnectServer
 def OT_API_ProcessSockets():
   return _otapi.OT_API_ProcessSockets()
 OT_API_ProcessSockets = _otapi.OT_API_ProcessSockets
+OTDB_MESSAGE_PACK = _otapi.OTDB_MESSAGE_PACK
+OTDB_PROTOCOL_BUFFERS = _otapi.OTDB_PROTOCOL_BUFFERS
 PACK_MESSAGE_PACK = _otapi.PACK_MESSAGE_PACK
 PACK_PROTOCOL_BUFFERS = _otapi.PACK_PROTOCOL_BUFFERS
 PACK_TYPE_ERROR = _otapi.PACK_TYPE_ERROR
@@ -1373,6 +1376,10 @@ CreateStorageContext = _otapi.CreateStorageContext
 def CreateObject(*args):
   return _otapi.CreateObject(*args)
 CreateObject = _otapi.CreateObject
+
+def CheckVaildValues(*args):
+  return _otapi.CheckVaildValues(*args)
+CheckVaildValues = _otapi.CheckVaildValues
 
 def Exists(*args):
   return _otapi.Exists(*args)

@@ -40,15 +40,15 @@ public class Storage : IDisposable {
     }
   }
 
-  public SWIGTYPE_p_OTPacker GetPacker(PackType ePackType) {
+  public SWIGTYPE_p_OTDB__OTPacker GetPacker(PackType ePackType) {
     IntPtr cPtr = otapiPINVOKE.Storage_GetPacker__SWIG_0(swigCPtr, (int)ePackType);
-    SWIGTYPE_p_OTPacker ret = (cPtr == IntPtr.Zero) ? null : new SWIGTYPE_p_OTPacker(cPtr, false);
+    SWIGTYPE_p_OTDB__OTPacker ret = (cPtr == IntPtr.Zero) ? null : new SWIGTYPE_p_OTDB__OTPacker(cPtr, false);
     return ret;
   }
 
-  public SWIGTYPE_p_OTPacker GetPacker() {
+  public SWIGTYPE_p_OTDB__OTPacker GetPacker() {
     IntPtr cPtr = otapiPINVOKE.Storage_GetPacker__SWIG_1(swigCPtr);
-    SWIGTYPE_p_OTPacker ret = (cPtr == IntPtr.Zero) ? null : new SWIGTYPE_p_OTPacker(cPtr, false);
+    SWIGTYPE_p_OTDB__OTPacker ret = (cPtr == IntPtr.Zero) ? null : new SWIGTYPE_p_OTDB__OTPacker(cPtr, false);
     return ret;
   }
 

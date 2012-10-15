@@ -1367,6 +1367,18 @@ public class otapi {
     return ret;
   }
 
+  public static bool CheckVaildValues(SWIGTYPE_p_std__string strFolder, SWIGTYPE_p_std__string oneStr, SWIGTYPE_p_std__string twoStr, SWIGTYPE_p_std__string threeStr, string szFuncName) {
+    bool ret = otapiPINVOKE.CheckVaildValues__SWIG_0(SWIGTYPE_p_std__string.getCPtr(strFolder), SWIGTYPE_p_std__string.getCPtr(oneStr), SWIGTYPE_p_std__string.getCPtr(twoStr), SWIGTYPE_p_std__string.getCPtr(threeStr), szFuncName);
+    if (otapiPINVOKE.SWIGPendingException.Pending) throw otapiPINVOKE.SWIGPendingException.Retrieve();
+    return ret;
+  }
+
+  public static bool CheckVaildValues(SWIGTYPE_p_std__string strFolder, SWIGTYPE_p_std__string oneStr, SWIGTYPE_p_std__string twoStr, SWIGTYPE_p_std__string threeStr) {
+    bool ret = otapiPINVOKE.CheckVaildValues__SWIG_1(SWIGTYPE_p_std__string.getCPtr(strFolder), SWIGTYPE_p_std__string.getCPtr(oneStr), SWIGTYPE_p_std__string.getCPtr(twoStr), SWIGTYPE_p_std__string.getCPtr(threeStr));
+    if (otapiPINVOKE.SWIGPendingException.Pending) throw otapiPINVOKE.SWIGPendingException.Retrieve();
+    return ret;
+  }
+
   public static bool Exists(string strFolder, string oneStr, string twoStr, string threeStr) {
     bool ret = otapiPINVOKE.Exists__SWIG_0(strFolder, oneStr, twoStr, threeStr);
     if (otapiPINVOKE.SWIGPendingException.Pending) throw otapiPINVOKE.SWIGPendingException.Retrieve();
@@ -1582,4 +1594,6 @@ public class otapi {
   public static readonly int OT_LARGE_MEMSIZE = otapiPINVOKE.OT_LARGE_MEMSIZE_get();
   public static readonly int OT_DEFAULT_BLOCKSIZE = otapiPINVOKE.OT_DEFAULT_BLOCKSIZE_get();
   public static readonly int OT_DEFAULT_MEMSIZE = otapiPINVOKE.OT_DEFAULT_MEMSIZE_get();
+  public static readonly int OTDB_MESSAGE_PACK = otapiPINVOKE.OTDB_MESSAGE_PACK_get();
+  public static readonly int OTDB_PROTOCOL_BUFFERS = otapiPINVOKE.OTDB_PROTOCOL_BUFFERS_get();
 }

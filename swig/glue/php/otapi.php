@@ -1103,6 +1103,10 @@ abstract class otapi {
 		return OT_API_ProcessSockets();
 	}
 
+	const OTDB_MESSAGE_PACK = OTDB_MESSAGE_PACK;
+
+	const OTDB_PROTOCOL_BUFFERS = OTDB_PROTOCOL_BUFFERS;
+
 	const PACK_MESSAGE_PACK = 0;
 
 	const PACK_PROTOCOL_BUFFERS = PACK_PROTOCOL_BUFFERS;
@@ -1187,6 +1191,14 @@ abstract class otapi {
 			$c=substr(get_resource_type($r), (strpos(get_resource_type($r), '__') ? strpos(get_resource_type($r), '__') + 2 : 3));
 			if (class_exists($c)) return new $c($r);
 			return new Storable($r);
+		}
+		return $r;
+	}
+
+	static function CheckVaildValues($strFolder,$oneStr,$twoStr,$threeStr,$szFuncName=null) {
+		switch (func_num_args()) {
+		case 4: $r=CheckVaildValues($strFolder,$oneStr,$twoStr,$threeStr); break;
+		default: $r=CheckVaildValues($strFolder,$oneStr,$twoStr,$threeStr,$szFuncName);
 		}
 		return $r;
 	}
@@ -1418,6 +1430,16 @@ class OTPassword {
 
 	static function CreateTextBuffer() {
 		$r=OTPassword_CreateTextBuffer();
+		if (is_resource($r)) {
+			$c=substr(get_resource_type($r), (strpos(get_resource_type($r), '__') ? strpos(get_resource_type($r), '__') + 2 : 3));
+			if (class_exists($c)) return new $c($r);
+			return new OTPassword($r);
+		}
+		return $r;
+	}
+
+	function opAssign($rhs) {
+		$r=OTPassword_opAssign($this->_cPtr,$rhs);
 		if (is_resource($r)) {
 			$c=substr(get_resource_type($r), (strpos(get_resource_type($r), '__') ? strpos(get_resource_type($r), '__') + 2 : 3));
 			if (class_exists($c)) return new $c($r);
