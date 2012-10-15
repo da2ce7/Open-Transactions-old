@@ -3458,32 +3458,33 @@ namespace Swig {
 #define SWIGTYPE_p_OTDB__MarketData swig_types[14]
 #define SWIGTYPE_p_OTDB__MarketList swig_types[15]
 #define SWIGTYPE_p_OTDB__OTDBString swig_types[16]
-#define SWIGTYPE_p_OTDB__OfferDataMarket swig_types[17]
-#define SWIGTYPE_p_OTDB__OfferDataNym swig_types[18]
-#define SWIGTYPE_p_OTDB__OfferListMarket swig_types[19]
-#define SWIGTYPE_p_OTDB__OfferListNym swig_types[20]
-#define SWIGTYPE_p_OTDB__RippleServer swig_types[21]
-#define SWIGTYPE_p_OTDB__Server swig_types[22]
-#define SWIGTYPE_p_OTDB__ServerInfo swig_types[23]
-#define SWIGTYPE_p_OTDB__Storable swig_types[24]
-#define SWIGTYPE_p_OTDB__Storage swig_types[25]
-#define SWIGTYPE_p_OTDB__StringMap swig_types[26]
-#define SWIGTYPE_p_OTDB__TradeDataMarket swig_types[27]
-#define SWIGTYPE_p_OTDB__TradeDataNym swig_types[28]
-#define SWIGTYPE_p_OTDB__TradeListMarket swig_types[29]
-#define SWIGTYPE_p_OTDB__TradeListNym swig_types[30]
-#define SWIGTYPE_p_OTDB__WalletData swig_types[31]
-#define SWIGTYPE_p_OTPacker swig_types[32]
+#define SWIGTYPE_p_OTDB__OTPacker swig_types[17]
+#define SWIGTYPE_p_OTDB__OfferDataMarket swig_types[18]
+#define SWIGTYPE_p_OTDB__OfferDataNym swig_types[19]
+#define SWIGTYPE_p_OTDB__OfferListMarket swig_types[20]
+#define SWIGTYPE_p_OTDB__OfferListNym swig_types[21]
+#define SWIGTYPE_p_OTDB__RippleServer swig_types[22]
+#define SWIGTYPE_p_OTDB__Server swig_types[23]
+#define SWIGTYPE_p_OTDB__ServerInfo swig_types[24]
+#define SWIGTYPE_p_OTDB__Storable swig_types[25]
+#define SWIGTYPE_p_OTDB__Storage swig_types[26]
+#define SWIGTYPE_p_OTDB__StringMap swig_types[27]
+#define SWIGTYPE_p_OTDB__TradeDataMarket swig_types[28]
+#define SWIGTYPE_p_OTDB__TradeDataNym swig_types[29]
+#define SWIGTYPE_p_OTDB__TradeListMarket swig_types[30]
+#define SWIGTYPE_p_OTDB__TradeListNym swig_types[31]
+#define SWIGTYPE_p_OTDB__WalletData swig_types[32]
 #define SWIGTYPE_p_OTPassword swig_types[33]
 #define SWIGTYPE_p_char swig_types[34]
 #define SWIGTYPE_p_int32_t swig_types[35]
 #define SWIGTYPE_p_std__mapT_std__string_std__string_t swig_types[36]
-#define SWIGTYPE_p_std__vectorT_unsigned_char_t swig_types[37]
-#define SWIGTYPE_p_uint32_t swig_types[38]
-#define SWIGTYPE_p_uint8_t swig_types[39]
-#define SWIGTYPE_p_void swig_types[40]
-static swig_type_info *swig_types[42];
-static swig_module_info swig_module = {swig_types, 41, 0, 0, 0, 0};
+#define SWIGTYPE_p_std__string swig_types[37]
+#define SWIGTYPE_p_std__vectorT_unsigned_char_t swig_types[38]
+#define SWIGTYPE_p_uint32_t swig_types[39]
+#define SWIGTYPE_p_uint8_t swig_types[40]
+#define SWIGTYPE_p_void swig_types[41]
+static swig_type_info *swig_types[43];
+static swig_module_info swig_module = {swig_types, 42, 0, 0, 0, 0};
 #define SWIG_TypeQuery(name) SWIG_TypeQueryModule(&swig_module, &swig_module, name)
 #define SWIG_MangledTypeQuery(name) SWIG_MangledTypeQueryModule(&swig_module, &swig_module, name)
 
@@ -3582,6 +3583,7 @@ namespace swig {
 
 #include <string>
 #include <map>
+#define IMPORT
 #include "../../include/otlib/OTAsymmetricKey.h"
 #include "../../include/otapi/OTAPI_funcdef.h"
 #include "../../include/otlib/OTStorage.h"
@@ -3989,9 +3991,6 @@ SWIG_AsVal_size_t (PyObject * obj, size_t *val)
   return res;
 }
 
-
-	using namespace OTDB;
-	
 
 
 /* ---------------------------------------------------
@@ -5353,6 +5352,40 @@ SWIGINTERN PyObject *_wrap_OTPassword_CreateTextBuffer(PyObject *SWIGUNUSEDPARM(
   
   if (!PyArg_ParseTuple(args,(char *)":OTPassword_CreateTextBuffer")) SWIG_fail;
   result = (OTPassword *)OTPassword::CreateTextBuffer();
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_OTPassword, 0 |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_OTPassword_opAssign(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  OTPassword *arg1 = (OTPassword *) 0 ;
+  OTPassword *arg2 = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  OTPassword *result = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:OTPassword_opAssign",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_OTPassword, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "OTPassword_opAssign" "', argument " "1"" of type '" "OTPassword *""'"); 
+  }
+  arg1 = reinterpret_cast< OTPassword * >(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_OTPassword,  0  | 0);
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "OTPassword_opAssign" "', argument " "2"" of type '" "OTPassword const &""'"); 
+  }
+  if (!argp2) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "OTPassword_opAssign" "', argument " "2"" of type '" "OTPassword const &""'"); 
+  }
+  arg2 = reinterpret_cast< OTPassword * >(argp2);
+  result = (OTPassword *) &(arg1)->operator =((OTPassword const &)*arg2);
   resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_OTPassword, 0 |  0 );
   return resultobj;
 fail:
@@ -17671,7 +17704,7 @@ SWIGINTERN PyObject *_wrap_Storage_GetPacker__SWIG_0(PyObject *SWIGUNUSEDPARM(se
   int ecode2 = 0 ;
   PyObject * obj0 = 0 ;
   PyObject * obj1 = 0 ;
-  OTPacker *result = 0 ;
+  OTDB::OTPacker *result = 0 ;
   
   if (!PyArg_ParseTuple(args,(char *)"OO:Storage_GetPacker",&obj0,&obj1)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_OTDB__Storage, 0 |  0 );
@@ -17684,8 +17717,8 @@ SWIGINTERN PyObject *_wrap_Storage_GetPacker__SWIG_0(PyObject *SWIGUNUSEDPARM(se
     SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "Storage_GetPacker" "', argument " "2"" of type '" "OTDB::PackType""'");
   } 
   arg2 = static_cast< OTDB::PackType >(val2);
-  result = (OTPacker *)(arg1)->GetPacker(arg2);
-  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_OTPacker, 0 |  0 );
+  result = (OTDB::OTPacker *)(arg1)->GetPacker(arg2);
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_OTDB__OTPacker, 0 |  0 );
   return resultobj;
 fail:
   return NULL;
@@ -17698,7 +17731,7 @@ SWIGINTERN PyObject *_wrap_Storage_GetPacker__SWIG_1(PyObject *SWIGUNUSEDPARM(se
   void *argp1 = 0 ;
   int res1 = 0 ;
   PyObject * obj0 = 0 ;
-  OTPacker *result = 0 ;
+  OTDB::OTPacker *result = 0 ;
   
   if (!PyArg_ParseTuple(args,(char *)"O:Storage_GetPacker",&obj0)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_OTDB__Storage, 0 |  0 );
@@ -17706,8 +17739,8 @@ SWIGINTERN PyObject *_wrap_Storage_GetPacker__SWIG_1(PyObject *SWIGUNUSEDPARM(se
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "Storage_GetPacker" "', argument " "1"" of type '" "OTDB::Storage *""'"); 
   }
   arg1 = reinterpret_cast< OTDB::Storage * >(argp1);
-  result = (OTPacker *)(arg1)->GetPacker();
-  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_OTPacker, 0 |  0 );
+  result = (OTDB::OTPacker *)(arg1)->GetPacker();
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_OTDB__OTPacker, 0 |  0 );
   return resultobj;
 fail:
   return NULL;
@@ -20724,6 +20757,212 @@ SWIGINTERN PyObject *_wrap_CreateObject(PyObject *SWIGUNUSEDPARM(self), PyObject
   return resultobj;
 fail:
   return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_CheckVaildValues__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  std::string *arg1 = 0 ;
+  std::string *arg2 = 0 ;
+  std::string *arg3 = 0 ;
+  std::string *arg4 = 0 ;
+  char *arg5 = (char *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  void *argp3 = 0 ;
+  int res3 = 0 ;
+  void *argp4 = 0 ;
+  int res4 = 0 ;
+  int res5 ;
+  char *buf5 = 0 ;
+  int alloc5 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  PyObject * obj3 = 0 ;
+  PyObject * obj4 = 0 ;
+  bool result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOOOO:CheckVaildValues",&obj0,&obj1,&obj2,&obj3,&obj4)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_std__string,  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "CheckVaildValues" "', argument " "1"" of type '" "std::string &""'"); 
+  }
+  if (!argp1) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "CheckVaildValues" "', argument " "1"" of type '" "std::string &""'"); 
+  }
+  arg1 = reinterpret_cast< std::string * >(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_std__string,  0 );
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "CheckVaildValues" "', argument " "2"" of type '" "std::string &""'"); 
+  }
+  if (!argp2) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "CheckVaildValues" "', argument " "2"" of type '" "std::string &""'"); 
+  }
+  arg2 = reinterpret_cast< std::string * >(argp2);
+  res3 = SWIG_ConvertPtr(obj2, &argp3, SWIGTYPE_p_std__string,  0 );
+  if (!SWIG_IsOK(res3)) {
+    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "CheckVaildValues" "', argument " "3"" of type '" "std::string &""'"); 
+  }
+  if (!argp3) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "CheckVaildValues" "', argument " "3"" of type '" "std::string &""'"); 
+  }
+  arg3 = reinterpret_cast< std::string * >(argp3);
+  res4 = SWIG_ConvertPtr(obj3, &argp4, SWIGTYPE_p_std__string,  0 );
+  if (!SWIG_IsOK(res4)) {
+    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "CheckVaildValues" "', argument " "4"" of type '" "std::string &""'"); 
+  }
+  if (!argp4) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "CheckVaildValues" "', argument " "4"" of type '" "std::string &""'"); 
+  }
+  arg4 = reinterpret_cast< std::string * >(argp4);
+  res5 = SWIG_AsCharPtrAndSize(obj4, &buf5, NULL, &alloc5);
+  if (!SWIG_IsOK(res5)) {
+    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "CheckVaildValues" "', argument " "5"" of type '" "char const *""'");
+  }
+  arg5 = reinterpret_cast< char * >(buf5);
+  result = (bool)OTDB::CheckVaildValues(*arg1,*arg2,*arg3,*arg4,(char const *)arg5);
+  resultobj = SWIG_From_bool(static_cast< bool >(result));
+  if (alloc5 == SWIG_NEWOBJ) delete[] buf5;
+  return resultobj;
+fail:
+  if (alloc5 == SWIG_NEWOBJ) delete[] buf5;
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_CheckVaildValues__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  std::string *arg1 = 0 ;
+  std::string *arg2 = 0 ;
+  std::string *arg3 = 0 ;
+  std::string *arg4 = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
+  void *argp3 = 0 ;
+  int res3 = 0 ;
+  void *argp4 = 0 ;
+  int res4 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  PyObject * obj3 = 0 ;
+  bool result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOOO:CheckVaildValues",&obj0,&obj1,&obj2,&obj3)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_std__string,  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "CheckVaildValues" "', argument " "1"" of type '" "std::string &""'"); 
+  }
+  if (!argp1) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "CheckVaildValues" "', argument " "1"" of type '" "std::string &""'"); 
+  }
+  arg1 = reinterpret_cast< std::string * >(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_std__string,  0 );
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "CheckVaildValues" "', argument " "2"" of type '" "std::string &""'"); 
+  }
+  if (!argp2) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "CheckVaildValues" "', argument " "2"" of type '" "std::string &""'"); 
+  }
+  arg2 = reinterpret_cast< std::string * >(argp2);
+  res3 = SWIG_ConvertPtr(obj2, &argp3, SWIGTYPE_p_std__string,  0 );
+  if (!SWIG_IsOK(res3)) {
+    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "CheckVaildValues" "', argument " "3"" of type '" "std::string &""'"); 
+  }
+  if (!argp3) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "CheckVaildValues" "', argument " "3"" of type '" "std::string &""'"); 
+  }
+  arg3 = reinterpret_cast< std::string * >(argp3);
+  res4 = SWIG_ConvertPtr(obj3, &argp4, SWIGTYPE_p_std__string,  0 );
+  if (!SWIG_IsOK(res4)) {
+    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "CheckVaildValues" "', argument " "4"" of type '" "std::string &""'"); 
+  }
+  if (!argp4) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "CheckVaildValues" "', argument " "4"" of type '" "std::string &""'"); 
+  }
+  arg4 = reinterpret_cast< std::string * >(argp4);
+  result = (bool)OTDB::CheckVaildValues(*arg1,*arg2,*arg3,*arg4);
+  resultobj = SWIG_From_bool(static_cast< bool >(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_CheckVaildValues(PyObject *self, PyObject *args) {
+  int argc;
+  PyObject *argv[6];
+  int ii;
+  
+  if (!PyTuple_Check(args)) SWIG_fail;
+  argc = args ? (int)PyObject_Length(args) : 0;
+  for (ii = 0; (ii < 5) && (ii < argc); ii++) {
+    argv[ii] = PyTuple_GET_ITEM(args,ii);
+  }
+  if (argc == 4) {
+    int _v;
+    void *vptr = 0;
+    int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_std__string, 0);
+    _v = SWIG_CheckState(res);
+    if (_v) {
+      void *vptr = 0;
+      int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_std__string, 0);
+      _v = SWIG_CheckState(res);
+      if (_v) {
+        void *vptr = 0;
+        int res = SWIG_ConvertPtr(argv[2], &vptr, SWIGTYPE_p_std__string, 0);
+        _v = SWIG_CheckState(res);
+        if (_v) {
+          void *vptr = 0;
+          int res = SWIG_ConvertPtr(argv[3], &vptr, SWIGTYPE_p_std__string, 0);
+          _v = SWIG_CheckState(res);
+          if (_v) {
+            return _wrap_CheckVaildValues__SWIG_1(self, args);
+          }
+        }
+      }
+    }
+  }
+  if (argc == 5) {
+    int _v;
+    void *vptr = 0;
+    int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_std__string, 0);
+    _v = SWIG_CheckState(res);
+    if (_v) {
+      void *vptr = 0;
+      int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_std__string, 0);
+      _v = SWIG_CheckState(res);
+      if (_v) {
+        void *vptr = 0;
+        int res = SWIG_ConvertPtr(argv[2], &vptr, SWIGTYPE_p_std__string, 0);
+        _v = SWIG_CheckState(res);
+        if (_v) {
+          void *vptr = 0;
+          int res = SWIG_ConvertPtr(argv[3], &vptr, SWIGTYPE_p_std__string, 0);
+          _v = SWIG_CheckState(res);
+          if (_v) {
+            int res = SWIG_AsCharPtrAndSize(argv[4], 0, NULL, 0);
+            _v = SWIG_CheckState(res);
+            if (_v) {
+              return _wrap_CheckVaildValues__SWIG_0(self, args);
+            }
+          }
+        }
+      }
+    }
+  }
+  
+fail:
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number or type of arguments for overloaded function 'CheckVaildValues'.\n"
+    "  Possible C/C++ prototypes are:\n"
+    "    OTDB::CheckVaildValues(std::string &,std::string &,std::string &,std::string &,char const *)\n"
+    "    OTDB::CheckVaildValues(std::string &,std::string &,std::string &,std::string &)\n");
+  return 0;
 }
 
 
@@ -33191,6 +33430,7 @@ static PyMethodDef SwigMethods[] = {
 	 { (char *)"OTPassword_zeroMemory", _wrap_OTPassword_zeroMemory, METH_VARARGS, NULL},
 	 { (char *)"OTPassword_safe_memcpy", _wrap_OTPassword_safe_memcpy, METH_VARARGS, NULL},
 	 { (char *)"OTPassword_CreateTextBuffer", _wrap_OTPassword_CreateTextBuffer, METH_VARARGS, NULL},
+	 { (char *)"OTPassword_opAssign", _wrap_OTPassword_opAssign, METH_VARARGS, NULL},
 	 { (char *)"new_OTPassword", _wrap_new_OTPassword, METH_VARARGS, NULL},
 	 { (char *)"delete_OTPassword", _wrap_delete_OTPassword, METH_VARARGS, NULL},
 	 { (char *)"OTPassword_swigregister", OTPassword_swigregister, METH_VARARGS, NULL},
@@ -33502,6 +33742,7 @@ static PyMethodDef SwigMethods[] = {
 	 { (char *)"GetDefaultStorage", _wrap_GetDefaultStorage, METH_VARARGS, NULL},
 	 { (char *)"CreateStorageContext", _wrap_CreateStorageContext, METH_VARARGS, NULL},
 	 { (char *)"CreateObject", _wrap_CreateObject, METH_VARARGS, NULL},
+	 { (char *)"CheckVaildValues", _wrap_CheckVaildValues, METH_VARARGS, NULL},
 	 { (char *)"Exists", _wrap_Exists, METH_VARARGS, NULL},
 	 { (char *)"StoreString", _wrap_StoreString, METH_VARARGS, NULL},
 	 { (char *)"QueryString", _wrap_QueryString, METH_VARARGS, NULL},
@@ -34082,6 +34323,7 @@ static swig_type_info _swigt__p_OTDB__LoomServer = {"_p_OTDB__LoomServer", "OTDB
 static swig_type_info _swigt__p_OTDB__MarketData = {"_p_OTDB__MarketData", "OTDB::MarketData *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_OTDB__MarketList = {"_p_OTDB__MarketList", "OTDB::MarketList *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_OTDB__OTDBString = {"_p_OTDB__OTDBString", "OTDB::OTDBString *", 0, 0, (void*)0, 0};
+static swig_type_info _swigt__p_OTDB__OTPacker = {"_p_OTDB__OTPacker", "OTDB::OTPacker *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_OTDB__OfferDataMarket = {"_p_OTDB__OfferDataMarket", "OTDB::OfferDataMarket *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_OTDB__OfferDataNym = {"_p_OTDB__OfferDataNym", "OTDB::OfferDataNym *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_OTDB__OfferListMarket = {"_p_OTDB__OfferListMarket", "OTDB::OfferListMarket *", 0, 0, (void*)0, 0};
@@ -34097,11 +34339,11 @@ static swig_type_info _swigt__p_OTDB__TradeDataNym = {"_p_OTDB__TradeDataNym", "
 static swig_type_info _swigt__p_OTDB__TradeListMarket = {"_p_OTDB__TradeListMarket", "OTDB::TradeListMarket *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_OTDB__TradeListNym = {"_p_OTDB__TradeListNym", "OTDB::TradeListNym *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_OTDB__WalletData = {"_p_OTDB__WalletData", "OTDB::WalletData *", 0, 0, (void*)0, 0};
-static swig_type_info _swigt__p_OTPacker = {"_p_OTPacker", "OTPacker *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_OTPassword = {"_p_OTPassword", "OTPassword *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_char = {"_p_char", "char *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_int32_t = {"_p_int32_t", "int32_t *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_std__mapT_std__string_std__string_t = {"_p_std__mapT_std__string_std__string_t", "std::map< std::string,std::string > *", 0, 0, (void*)0, 0};
+static swig_type_info _swigt__p_std__string = {"_p_std__string", "std::string *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_std__vectorT_unsigned_char_t = {"_p_std__vectorT_unsigned_char_t", "std::vector< unsigned char > *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_uint32_t = {"_p_uint32_t", "uint32_t *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_uint8_t = {"_p_uint8_t", "uint8_t *", 0, 0, (void*)0, 0};
@@ -34125,6 +34367,7 @@ static swig_type_info *swig_type_initial[] = {
   &_swigt__p_OTDB__MarketData,
   &_swigt__p_OTDB__MarketList,
   &_swigt__p_OTDB__OTDBString,
+  &_swigt__p_OTDB__OTPacker,
   &_swigt__p_OTDB__OfferDataMarket,
   &_swigt__p_OTDB__OfferDataNym,
   &_swigt__p_OTDB__OfferListMarket,
@@ -34140,11 +34383,11 @@ static swig_type_info *swig_type_initial[] = {
   &_swigt__p_OTDB__TradeListMarket,
   &_swigt__p_OTDB__TradeListNym,
   &_swigt__p_OTDB__WalletData,
-  &_swigt__p_OTPacker,
   &_swigt__p_OTPassword,
   &_swigt__p_char,
   &_swigt__p_int32_t,
   &_swigt__p_std__mapT_std__string_std__string_t,
+  &_swigt__p_std__string,
   &_swigt__p_std__vectorT_unsigned_char_t,
   &_swigt__p_uint32_t,
   &_swigt__p_uint8_t,
@@ -34168,6 +34411,7 @@ static swig_cast_info _swigc__p_OTDB__LoomServer[] = {  {&_swigt__p_OTDB__LoomSe
 static swig_cast_info _swigc__p_OTDB__MarketData[] = {  {&_swigt__p_OTDB__MarketData, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_OTDB__MarketList[] = {  {&_swigt__p_OTDB__MarketList, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_OTDB__OTDBString[] = {  {&_swigt__p_OTDB__OTDBString, 0, 0, 0},{0, 0, 0, 0}};
+static swig_cast_info _swigc__p_OTDB__OTPacker[] = {  {&_swigt__p_OTDB__OTPacker, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_OTDB__OfferDataMarket[] = {  {&_swigt__p_OTDB__AskData, _p_OTDB__AskDataTo_p_OTDB__OfferDataMarket, 0, 0},  {&_swigt__p_OTDB__OfferDataMarket, 0, 0, 0},  {&_swigt__p_OTDB__BidData, _p_OTDB__BidDataTo_p_OTDB__OfferDataMarket, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_OTDB__OfferDataNym[] = {  {&_swigt__p_OTDB__OfferDataNym, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_OTDB__OfferListMarket[] = {  {&_swigt__p_OTDB__OfferListMarket, 0, 0, 0},{0, 0, 0, 0}};
@@ -34183,11 +34427,11 @@ static swig_cast_info _swigc__p_OTDB__TradeDataNym[] = {  {&_swigt__p_OTDB__Trad
 static swig_cast_info _swigc__p_OTDB__TradeListMarket[] = {  {&_swigt__p_OTDB__TradeListMarket, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_OTDB__TradeListNym[] = {  {&_swigt__p_OTDB__TradeListNym, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_OTDB__WalletData[] = {  {&_swigt__p_OTDB__WalletData, 0, 0, 0},{0, 0, 0, 0}};
-static swig_cast_info _swigc__p_OTPacker[] = {  {&_swigt__p_OTPacker, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_OTPassword[] = {  {&_swigt__p_OTPassword, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_char[] = {  {&_swigt__p_char, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_int32_t[] = {  {&_swigt__p_int32_t, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_std__mapT_std__string_std__string_t[] = {  {&_swigt__p_std__mapT_std__string_std__string_t, 0, 0, 0},{0, 0, 0, 0}};
+static swig_cast_info _swigc__p_std__string[] = {  {&_swigt__p_std__string, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_std__vectorT_unsigned_char_t[] = {  {&_swigt__p_std__vectorT_unsigned_char_t, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_uint32_t[] = {  {&_swigt__p_uint32_t, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_uint8_t[] = {  {&_swigt__p_uint8_t, 0, 0, 0},{0, 0, 0, 0}};
@@ -34211,6 +34455,7 @@ static swig_cast_info *swig_cast_initial[] = {
   _swigc__p_OTDB__MarketData,
   _swigc__p_OTDB__MarketList,
   _swigc__p_OTDB__OTDBString,
+  _swigc__p_OTDB__OTPacker,
   _swigc__p_OTDB__OfferDataMarket,
   _swigc__p_OTDB__OfferDataNym,
   _swigc__p_OTDB__OfferListMarket,
@@ -34226,11 +34471,11 @@ static swig_cast_info *swig_cast_initial[] = {
   _swigc__p_OTDB__TradeListMarket,
   _swigc__p_OTDB__TradeListNym,
   _swigc__p_OTDB__WalletData,
-  _swigc__p_OTPacker,
   _swigc__p_OTPassword,
   _swigc__p_char,
   _swigc__p_int32_t,
   _swigc__p_std__mapT_std__string_std__string_t,
+  _swigc__p_std__string,
   _swigc__p_std__vectorT_unsigned_char_t,
   _swigc__p_uint32_t,
   _swigc__p_uint8_t,
@@ -34928,6 +35173,8 @@ SWIG_init(void) {
   SWIG_Python_SetConstant(d, "OT_DEFAULT_MEMSIZE",SWIG_From_int(static_cast< int >(129)));
   SWIG_Python_SetConstant(d, "OTPassword_DEFAULT_SIZE",SWIG_From_int(static_cast< int >(OTPassword::DEFAULT_SIZE)));
   SWIG_Python_SetConstant(d, "OTPassword_LARGER_SIZE",SWIG_From_int(static_cast< int >(OTPassword::LARGER_SIZE)));
+  SWIG_Python_SetConstant(d, "OTDB_MESSAGE_PACK",SWIG_From_int(static_cast< int >(1)));
+  SWIG_Python_SetConstant(d, "OTDB_PROTOCOL_BUFFERS",SWIG_From_int(static_cast< int >(1)));
   SWIG_Python_SetConstant(d, "PACK_MESSAGE_PACK",SWIG_From_int(static_cast< int >(OTDB::PACK_MESSAGE_PACK)));
   SWIG_Python_SetConstant(d, "PACK_PROTOCOL_BUFFERS",SWIG_From_int(static_cast< int >(OTDB::PACK_PROTOCOL_BUFFERS)));
   SWIG_Python_SetConstant(d, "PACK_TYPE_ERROR",SWIG_From_int(static_cast< int >(OTDB::PACK_TYPE_ERROR)));

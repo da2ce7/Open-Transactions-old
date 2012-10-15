@@ -537,6 +537,12 @@ EXPORT	void callTwo(); // Asks for password twice. (For confirmation during nym 
 };
 
 
+// This is the only part of the API that actually accepts objects as parameters,
+// since the above objects have SWIG C++ wrappers. 
+//
+EXPORT bool OT_API_Set_PasswordCallback(OTCaller & theCaller); // Caller must have Callback attached already.
+
+
 
 // ------------------------------------------------
 

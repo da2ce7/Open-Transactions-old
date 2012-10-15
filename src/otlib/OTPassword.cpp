@@ -178,6 +178,8 @@ extern "C"
 
 #include "OTString.h"
 
+#include "OTAsymmetricKey.h"
+
 #include "OTLog.h"
 
 // ---------------------------------------------------------
@@ -1243,6 +1245,46 @@ int32_t OTPassword::setMemory(const void * vInput, uint32_t nInputSize)
 }
 
 // ---------------------------------------------------------
+
+
+
+
+
+
+bool OT_API_Set_PasswordCallback(OTCaller & theCaller) // Caller must have Callback attached already.
+{
+    const char * szFunc = "OT_API_Set_PasswordCallback";
+
+	if (!theCaller.isCallbackSet())
+	{
+		OTLog::vError("%s: ERROR:\nOTCaller::setCallback() "
+					 "MUST be called first, with an OTCallback-extended class passed to it,\n"
+					 "before then invoking this function (and passing that OTCaller as a parameter "
+                      "into this function.)\n", szFunc);
+		return false;
+	}
+	
+	OTLog::vOutput(1, "%s: FYI, calling OTAsymmetricKey::SetPasswordCaller(theCaller) now... (which is where "
+				   "OT internally sets its pointer to the Java caller object, which must have been passed in as a "
+                   "parameter to this function. "
+				   "This is also where OT either sets its internal 'C'-based password callback to the souped_up "
+                   "version which uses that Java caller object, "
+				   "OR where OT sets its internal callback to NULL--which causes OpenSSL to ask for the passphrase "
+                   "on the CONSOLE instead.)\n", 
+                   szFunc);
+
+	const bool bSuccess = OTAsymmetricKey::SetPasswordCaller(theCaller);
+	
+	OTLog::vOutput(1, "%s: RESULT of call to OTAsymmetricKey::SetPasswordCaller: %s", szFunc,
+				   bSuccess ? "SUCCESS" : "FAILURE");
+	
+	return bSuccess;
+}
+
+// ***************************************************
+
+
+
 
 
 

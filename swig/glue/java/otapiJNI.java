@@ -6,7 +6,7 @@
  * the SWIG interface file instead.
  * ----------------------------------------------------------------------------- */
 
-package com.wrapper.core.jni;
+package org.opentransactions.jni.core;
 
 public class otapiJNI {
   public final static native int OTPASSWORD_BLOCKSIZE_get();
@@ -50,6 +50,7 @@ public class otapiJNI {
   public final static native long OTPassword_safe_memcpy__SWIG_0(long jarg1, long jarg2, long jarg3, long jarg4, boolean jarg5);
   public final static native long OTPassword_safe_memcpy__SWIG_1(long jarg1, long jarg2, long jarg3, long jarg4);
   public final static native long OTPassword_CreateTextBuffer();
+  public final static native long OTPassword_opAssign(long jarg1, OTPassword jarg1_, long jarg2, OTPassword jarg2_);
   public final static native long new_OTPassword__SWIG_0(int jarg1);
   public final static native long new_OTPassword__SWIG_1();
   public final static native long new_OTPassword__SWIG_2(long jarg1, OTPassword jarg1_);
@@ -345,36 +346,11 @@ public class otapiJNI {
   public final static native String OT_API_Message_GetNymboxHash(String jarg1);
   public final static native int OT_API_ConnectServer(String jarg1, String jarg2, String jarg3, String jarg4, String jarg5);
   public final static native int OT_API_ProcessSockets();
+  public final static native int OTDB_MESSAGE_PACK_get();
+  public final static native int OTDB_PROTOCOL_BUFFERS_get();
   public final static native int PACK_MESSAGE_PACK_get();
-  public final static native int PACK_PROTOCOL_BUFFERS_get();
-  public final static native int PACK_TYPE_ERROR_get();
   public final static native int STORE_FILESYSTEM_get();
-  public final static native int STORE_TYPE_SUBCLASS_get();
   public final static native int STORED_OBJ_STRING_get();
-  public final static native int STORED_OBJ_BLOB_get();
-  public final static native int STORED_OBJ_STRING_MAP_get();
-  public final static native int STORED_OBJ_WALLET_DATA_get();
-  public final static native int STORED_OBJ_BITCOIN_ACCT_get();
-  public final static native int STORED_OBJ_BITCOIN_SERVER_get();
-  public final static native int STORED_OBJ_RIPPLE_SERVER_get();
-  public final static native int STORED_OBJ_LOOM_SERVER_get();
-  public final static native int STORED_OBJ_SERVER_INFO_get();
-  public final static native int STORED_OBJ_CONTACT_NYM_get();
-  public final static native int STORED_OBJ_CONTACT_ACCT_get();
-  public final static native int STORED_OBJ_CONTACT_get();
-  public final static native int STORED_OBJ_ADDRESS_BOOK_get();
-  public final static native int STORED_OBJ_MARKET_DATA_get();
-  public final static native int STORED_OBJ_MARKET_LIST_get();
-  public final static native int STORED_OBJ_BID_DATA_get();
-  public final static native int STORED_OBJ_ASK_DATA_get();
-  public final static native int STORED_OBJ_OFFER_LIST_MARKET_get();
-  public final static native int STORED_OBJ_TRADE_DATA_MARKET_get();
-  public final static native int STORED_OBJ_TRADE_LIST_MARKET_get();
-  public final static native int STORED_OBJ_OFFER_DATA_NYM_get();
-  public final static native int STORED_OBJ_OFFER_LIST_NYM_get();
-  public final static native int STORED_OBJ_TRADE_DATA_NYM_get();
-  public final static native int STORED_OBJ_TRADE_LIST_NYM_get();
-  public final static native int STORED_OBJ_ERROR_get();
   public final static native void delete_Storable(long jarg1);
   public final static native long Storable_Create(int jarg1, int jarg2);
   public final static native long Storable_ot_dynamic_cast(long jarg1, Storable jarg1_);
@@ -423,6 +399,8 @@ public class otapiJNI {
   public final static native long CreateStorageContext__SWIG_0(int jarg1, int jarg2);
   public final static native long CreateStorageContext__SWIG_1(int jarg1);
   public final static native long CreateObject(int jarg1);
+  public final static native boolean CheckVaildValues__SWIG_0(long jarg1, long jarg2, long jarg3, long jarg4, String jarg5);
+  public final static native boolean CheckVaildValues__SWIG_1(long jarg1, long jarg2, long jarg3, long jarg4);
   public final static native boolean Exists__SWIG_0(String jarg1, String jarg2, String jarg3, String jarg4);
   public final static native boolean Exists__SWIG_1(String jarg1, String jarg2, String jarg3);
   public final static native boolean Exists__SWIG_2(String jarg1, String jarg2);

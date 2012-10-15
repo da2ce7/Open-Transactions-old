@@ -181,12 +181,6 @@ extern "C"
 #endif // OT_KEY_TIMER
 // --------------------------------------------------------
 
-// This is the only part of the API that actually accepts objects as parameters,
-// since the above objects have SWIG C++ wrappers. 
-//
-EXPORT bool OT_API_Set_PasswordCallback(OTCaller & theCaller); // Caller must have Callback attached already.
-
-
 // ------------------------------------------------
 // For getting the password from the user, for using his private key.
 //
