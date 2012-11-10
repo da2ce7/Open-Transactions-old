@@ -270,11 +270,14 @@ unique_ptr<OTSocket> OT_CTX::s_p_Socket = unique_ptr<OTSocket>(nullptr);
 
 bool OT_CTX::bOTAPI = false;
 
-OT_CTX::OT_CTX()
+OT_CTX::OT_CTX() : m_pCrypto(new OTCrypto_OpenSSL())
 {
 	if (!bOTAPI)
+	{
+		OTCrypto::Set(m_pCrypto);
 		if (!InitOTAPI()) OT_ASSERT(false);
 		else bOTAPI = true;
+	}
 }
 
 OT_CTX::~OT_CTX()
@@ -282,7 +285,7 @@ OT_CTX::~OT_CTX()
 	if (!CleanupOTAPI()) OT_ASSERT(false);
 }
 
-unique_ptr<OT_API> OT_CTX::New(OTServerConnection::TransportFunc tFunc)
+std::unique_ptr<OT_API> OT_CTX::New(const OTServerConnection::TransportFunc & tFunc)
 {
 	unique_ptr<OT_API> p_API = unique_ptr<OT_API>(new OT_API(tFunc));
 
@@ -292,11 +295,11 @@ unique_ptr<OT_API> OT_CTX::New(OTServerConnection::TransportFunc tFunc)
 }
 
 //static
-shared_ptr<OT_CTX> OT_CTX::It()
+const std::unique_ptr<OT_CTX> & OT_CTX::It()
 {
-	static shared_ptr<OT_CTX> pOT_CTX(nullptr);
+	static unique_ptr<OT_CTX> pOT_CTX = nullptr;
 
-	if (nullptr == pOT_CTX) pOT_CTX = shared_ptr<OT_CTX>(new OT_CTX());
+	if (nullptr == pOT_CTX) pOT_CTX = unique_ptr<OT_CTX>(new OT_CTX());
 	return pOT_CTX;
 }
 
@@ -314,6 +317,8 @@ bool OT_CTX::InitOTAPI()
 
 	OTLog::vOutput(1, "(transport build: OTMessage -> OTEnvelope -> ZMQ )\n");
 
+	OTLog::vError("CALLING:: %s: OTCrypto::It();\n",__FUNCTION__);
+	OTCrypto::It();  // Init() is now called by the constructor.
 
 	// ------------------------------------
 #ifdef _WIN32
@@ -361,7 +366,7 @@ bool OT_CTX::InitOTAPI()
 	// ------------------------------------
 	OT_CTX::s_p_ZMQ_Mutex = unique_ptr<tthread::mutex>(new tthread::mutex); // This is a new mutex, not a new thread.
 	// ------------------------------------    
-	OTCrypto::It()->Init(); // (OpenSSL gets initialized here.)
+
 	// ------------------------------------
 	// TODO in the case of Windows, figure err into this return val somehow.
 	// (Or log it or something.)
@@ -377,11 +382,13 @@ bool OT_CTX::InitOTAPI()
 //static
 bool OT_CTX::CleanupOTAPI()
 {
+	OTMasterKey::Cleanup(); // it has a static list of dynamically allocated master keys that need to be cleaned up, if the application is shutting down.
+    // ------------------------------------
 
 	// We clean these up in reverse order from the Init function, which just seems
 	// like the best default, in absence of any brighter ideas.
 	//
-	OTCrypto::It()->Cleanup();  // (OpenSSL gets cleaned up here.)
+	//OTCrypto::It();  // this will be automatically cleaned up... but we want it cleaned up AFTER this.
 
 	// ------------------------------------
 #ifdef _WIN32

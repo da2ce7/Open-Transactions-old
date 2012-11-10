@@ -159,8 +159,10 @@ int main (int argc, char * const argv[])
 
 	class __OTcreatemint_RAII
 	{
+	private:
+		const std::shared_ptr<OTCrypto> m_pCrypto;
 	public:
-		__OTcreatemint_RAII()
+		__OTcreatemint_RAII() : m_pCrypto(new OTCrypto_OpenSSL())
 		{
 			OTLog::vOutput(0, "\n\nWelcome to Open Transactions -- 'createmint', version %s\n", 
 				OTLog::Version());
@@ -214,8 +216,8 @@ int main (int argc, char * const argv[])
 			OT_ASSERT_MSG(bFindOTPath, "main(): Assert failed: Failed to set OT Path");
 
 			// -----------------------------------------------------------------------    
-
-			OTCrypto::It()->Init(); // (OpenSSL gets initialized here.)
+			OTCrypto::Set(m_pCrypto);
+			OTCrypto::It();  // Init() is now called by the constructor.
 
 			// ------------------------------------
 		}
@@ -224,7 +226,7 @@ int main (int argc, char * const argv[])
 			// We clean these up in reverse order from the Init function, which just seems
 			// like the best default, in absence of any brighter ideas.
 			//
-			OTCrypto::It()->Cleanup();  // (OpenSSL gets cleaned up here.)
+//			OTCrypto::It()->Cleanup();  // (OpenSSL gets cleaned up here.)
 
 			// ------------------------------------
 #ifdef _WIN32

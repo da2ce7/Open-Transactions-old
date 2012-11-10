@@ -192,14 +192,27 @@ class OTSignature;
 class OTCrypto
 {
 private:
-    static  int  s_nCount;   // Instance count, should never exceed 1.
+    //static  int  s_nCount;   // Instance count, should never exceed 1.
+
+	static bool s_bHasInitialized;
+	static std::shared_ptr<OTCrypto> s_pCrypto;
+
+EXPORT    void Init();
+
 protected:
     OTCrypto();
     
-    virtual void Init_Override();     
-    virtual void Cleanup_Override();
+    //virtual void Init_Override();     
+    //virtual void Cleanup_Override();
 public:
+
+	EXPORT	static const bool Set(const std::shared_ptr<OTCrypto> & pCrypto);
+
+	EXPORT	static const std::shared_ptr<OTCrypto> & It();
+
     virtual ~OTCrypto();
+
+	virtual bool HasInitialized() const=0;
     
     // (To instantiate a text secret, just do this: OTPassword thePass;)
     virtual OTPassword * InstantiateBinarySecret()=0;
@@ -260,11 +273,7 @@ public:
                                  const OTSignature & theSignature,
                                  OTPasswordData    * pPWData=NULL) const=0;
     // ----------------------------------
-	EXPORT    static const std::unique_ptr<OTCrypto> & It();
-    
-EXPORT    void Init();     
-EXPORT    void Cleanup();    
-    // ----------------------------------
+   
 };
 
 
@@ -273,15 +282,22 @@ EXPORT    void Cleanup();
 
 // Someday: OTCrypto_GPG    }:-)
 
-class OTCrypto_OpenSSL : public OTCrypto
+class OTCrypto_OpenSSL :  public OTCrypto
 {
     friend class OTCrypto;
-    
+
+private:
+
+	bool m_bHasInitialized;
+	bool m_bHasCleanedUp;
+
+	void Init();
+    void Cleanup();
+
 protected:
-    OTCrypto_OpenSSL();
     // ----------------------------------    
-    virtual void Init_Override();     
-    virtual void Cleanup_Override();
+    //virtual void Init_Override();     
+    //virtual void Cleanup_Override();
     // ----------------------------------
     // These are protected because they contain OpenSSL-specific parameters.
     //
@@ -315,6 +331,11 @@ public:
     static tthread::mutex * s_arrayMutex;
     // ----------------------------------
     
+	EXPORT OTCrypto_OpenSSL();
+	EXPORT ~OTCrypto_OpenSSL();
+
+	bool HasInitialized() const { return m_bHasInitialized; };
+
     // (To instantiate a text secret, just do this: OTPassword thePass;)
     virtual OTPassword * InstantiateBinarySecret();
     // ----------------------------------
@@ -361,8 +382,6 @@ public:
     // ----------------------------------
     void thread_setup();
     void thread_cleanup();
-    
-    virtual ~OTCrypto_OpenSSL();
 };
 
 // ------------------------------------------------------------------------

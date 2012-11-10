@@ -263,45 +263,42 @@ mapOfMasterKeys  OTMasterKey::s_mapMasterKeys;
 //
 
 //static
-int OTCrypto::s_nCount = 0;   // Instance count, should never exceed 1. (At this point, anyway.)
+//int OTCrypto::s_nCount = 0;   // Instance count, should never exceed 1. (At this point, anyway.)
 
+bool  OTCrypto::s_bHasInitialized = false;
+std::shared_ptr<OTCrypto> OTCrypto::s_pCrypto = nullptr;
 
 // -----------------------------
 
 
 OTCrypto::OTCrypto()
 {
-    
+    if (!s_bHasInitialized) this->Init();
 }
 
 OTCrypto::~OTCrypto()
 {
-    
+	// clean-up happens automatically with the OTCrypto_OpenSSL destructor.
 }
     
 // -----------------------------
+//static
+const bool OTCrypto::Set(const std::shared_ptr<OTCrypto> & pCrypto)
+{
+	OT_ASSERT(nullptr != pCrypto);
+	if (nullptr != s_pCrypto) return false;
+
+	s_pCrypto = pCrypto;
+	return true;
+}
+
 
 //static
-const std::unique_ptr<OTCrypto> & OTCrypto::It()
+const std::shared_ptr<OTCrypto> & OTCrypto::It()
 {
+	if (nullptr == s_pCrypto) { OTLog::vError("ERROR:: %s: NULL %s !\n",__FUNCTION__,"s_pCrypto");	OT_ASSERT(false); return s_pCrypto; }
 
-static std::unique_ptr<OTCrypto> theCrypto(nullptr);
-
-if (nullptr != theCrypto) return theCrypto;
-
-    // Todo: someday, swapping the crypto lib should be as easy as changing this
-    // compile flag to OT_CRYPTO_USING_GPG. We'll get there.
-    //
-
-
-#ifdef OT_CRYPTO_USING_OPENSSL
-theCrypto = std::unique_ptr<OTCrypto>(new OTCrypto_OpenSSL());
-#endif
-
-
-
-OT_ASSERT(nullptr != theCrypto);  return theCrypto; 
-
+	return s_pCrypto;
 }
 
 // -----------------------------
@@ -310,73 +307,67 @@ OT_ASSERT(nullptr != theCrypto);  return theCrypto;
 
 void OTCrypto::Init()
 {
-    // This is only supposed to happen once per run.
-    //
-    if (0 == OTCrypto::s_nCount)
-    {
-        ++(OTCrypto::s_nCount);        
-        // -----------------------------
-        
-        OTLog::Output(1, "OT_Init: Setting up rlimits, and crypto library...\n");
+	if (s_bHasInitialized) { OTLog::vError("ERROR:: %s: Already Initialized, Shouldn't Get Called!!!\n",__FUNCTION__);	OT_ASSERT(false); return; }
 
-        // Here is a security measure intended to make it more difficult to capture a core
-        // dump. (Not used in debug mode, obviously.)
-        //
+	s_bHasInitialized = true; 
+
+
+	OTLog::Output(1, "OT_Init: Setting up rlimits, and crypto library...\n");
+
+	// Here is a security measure intended to make it more difficult to capture a core
+	// dump. (Not used in debug mode, obviously.)
+	//
+
 #if !defined(PREDEF_MODE_DEBUG) && defined(PREDEF_PLATFORM_UNIX)
-        struct rlimit rlim;
-        getrlimit(RLIMIT_CORE, &rlim);
-        rlim.rlim_max = rlim.rlim_cur = 0;
-        if (setrlimit(RLIMIT_CORE, &rlim))
-        {
-            OT_ASSERT_MSG(false, "OTCrypto::Init: ASSERT: setrlimit failed. (Used for preventing core dumps.)\n");
-        }
+	struct rlimit rlim;
+	getrlimit(RLIMIT_CORE, &rlim);
+	rlim.rlim_max = rlim.rlim_cur = 0;
+	if (setrlimit(RLIMIT_CORE, &rlim))
+	{
+		OT_ASSERT_MSG(false, "OTCrypto::Init: ASSERT: setrlimit failed. (Used for preventing core dumps.)\n");
+	}
 #endif
-        
-        // -----------------------------
-        this->Init_Override();
-    }
-    else
-        OTLog::Error("OTCrypto::Init: ERROR: Somehow this erroneously got called more than once! (Doing nothing.)\n");
+
 }
 // -----------------------------
 
 // Currently called by OTLog::OT_Cleanup();
 
-void OTCrypto::Cleanup()
-{
-    // This is only supposed to happen once per run.
-    //
-    if (1 == OTCrypto::s_nCount)
-    {
-        --(OTCrypto::s_nCount);
-        // -----------------------------
-        
-        // Any crypto-related cleanup code NOT specific to OpenSSL (which is
-        // handled in OTCrypto_OpenSSL, a subclass) would go here. 
-        //
-        
-        // -----------------------------
-        this->Cleanup_Override();
-    }
-    else
-        OTLog::Error("OTCrypto::Cleanup: ERROR: Somehow this erroneously got called more than once! (Doing nothing.)\n");
-}
+//void OTCrypto::Cleanup()
+//{
+//    // This is only supposed to happen once per run.
+//    //
+//    if (1 == OTCrypto::s_nCount)
+//    {
+//        --(OTCrypto::s_nCount);
+//        // -----------------------------
+//        
+//        // Any crypto-related cleanup code NOT specific to OpenSSL (which is
+//        // handled in OTCrypto_OpenSSL, a subclass) would go here. 
+//        //
+//        
+//        // -----------------------------
+//        this->Cleanup_Override();
+//    }
+//    else
+//        OTLog::Error("OTCrypto::Cleanup: ERROR: Somehow this erroneously got called more than once! (Doing nothing.)\n");
+//}
 
 // -----------------------------
 
-//virtual (Should never get called.)
-void OTCrypto::Init_Override()
-{
-    OTLog::Error("OTCrypto::Init_Override: ERROR: This function should NEVER be called (you should be overriding it...)\n");
-}
-
-// -----------------------------
-
-//virtual (Should never get called.)
-void OTCrypto::Cleanup_Override()
-{
-    OTLog::Error("OTCrypto::Cleanup_Override: ERROR: This function should NEVER be called (you should be overriding it...)\n");
-}
+////virtual (Should never get called.)
+//void OTCrypto::Init_Override()
+//{
+//    OTLog::Error("OTCrypto::Init_Override: ERROR: This function should NEVER be called (you should be overriding it...)\n");
+//}
+//
+//// -----------------------------
+//
+////virtual (Should never get called.)
+//void OTCrypto::Cleanup_Override()
+//{
+//    OTLog::Error("OTCrypto::Cleanup_Override: ERROR: This function should NEVER be called (you should be overriding it...)\n");
+//}
 
 
 // ********************************************************************************
@@ -384,14 +375,14 @@ void OTCrypto::Cleanup_Override()
 
 // Someday: OTCryptoGPG    }:-)
 //
-OTCrypto_OpenSSL::OTCrypto_OpenSSL() : OTCrypto()
+OTCrypto_OpenSSL::OTCrypto_OpenSSL() : OTCrypto(), m_bHasInitialized(false), m_bHasCleanedUp(false)
 {
-    
+    this->Init();
 }
 
 OTCrypto_OpenSSL::~OTCrypto_OpenSSL()
 {
-    
+    this->Cleanup();
 }
 
 // -----------------------------
@@ -866,8 +857,13 @@ void OTCrypto_OpenSSL::thread_cleanup()
 // *********************************************************************************
 
 
-void OTCrypto_OpenSSL::Init_Override()
+void OTCrypto_OpenSSL::Init()
 {
+	if (m_bHasCleanedUp) { OTLog::vError("ERROR:: %s: Have CleanedUped and trying to Initialize??!!\n",__FUNCTION__);	OT_ASSERT(false); return; }
+	if (m_bHasInitialized) { OTLog::vError("ERROR:: %s: Already Initialized!!\n",__FUNCTION__);	OT_ASSERT(false); return; }
+
+	m_bHasInitialized = true;
+
     const char * szFunc = "OTCrypto_OpenSSL::Init_Override";
     
     OTLog::vOutput(1, "%s: Setting up OpenSSL:  SSL_library_init, error strings and algorithms, and OpenSSL config...\n", 
@@ -1164,8 +1160,13 @@ void OTCrypto_OpenSSL::Init_Override()
 
 
 
-void OTCrypto_OpenSSL::Cleanup_Override()
+void OTCrypto_OpenSSL::Cleanup()
 {
+	if (!m_bHasInitialized) { OTLog::vError("ERROR:: %s: Never Initialized, no need to Cleanup!\n",__FUNCTION__);	return; }
+	if (m_bHasCleanedUp) { OTLog::vError("ERROR:: %s: Have Cleaned Up... Why Try again!??\n",__FUNCTION__);	OT_ASSERT(false); return; }
+	
+	m_bHasCleanedUp = true;
+
     const char * szFunc = "OTCrypto_OpenSSL::Cleanup_Override";
     
     OTLog::vOutput(4, "%s: Cleaning up OpenSSL...\n", szFunc);

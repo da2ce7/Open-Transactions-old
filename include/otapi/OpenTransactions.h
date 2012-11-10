@@ -188,6 +188,7 @@ class OTLedger;
 class OTPayment;
 class OTNym_or_SymmetricKey;
 class OTToken;
+class OTCrypto;
 class OT_API;
 class OTSocket;
 class OTServerConnection;
@@ -207,6 +208,8 @@ private:
 	static bool	InitOTAPI();
 	static bool CleanupOTAPI();
 
+	const std::shared_ptr<OTCrypto> m_pCrypto;
+
 	OT_CTX();
 
 public:
@@ -216,9 +219,9 @@ public:
 	EXPORT static unique_ptr<tthread::mutex> s_p_ZMQ_Mutex;
 	EXPORT static unique_ptr<OTSocket> s_p_Socket;
 
-	EXPORT static shared_ptr<OT_CTX> It();
+	EXPORT static const std::unique_ptr<OT_CTX> & It();
 
-	EXPORT unique_ptr<OT_API> New(OTServerConnection::TransportFunc tFunc);
+	EXPORT std::unique_ptr<OT_API> New(const OTServerConnection::TransportFunc & tFunc);
 
 };
 

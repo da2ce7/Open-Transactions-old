@@ -750,11 +750,12 @@ int main(int argc, char* argv[])
     //
     class __ot_server_
     {
+		const std::shared_ptr<OTCrypto> m_pCrypto;
         OTServer * m_pServer;
     public:
         OTServer * GetServer() { return m_pServer; }
         // -----------------------------------
-        __ot_server_() : m_pServer(NULL) // INIT 
+		__ot_server_() : m_pServer(NULL), m_pCrypto(new OTCrypto_OpenSSL()) // INIT 
         {
             // -----------------------------------------------------------------------   
 	
@@ -788,8 +789,8 @@ int main(int argc, char* argv[])
 			}
 
             // -----------------------------------------------------------------------    
-            
-            OTCrypto::It()->Init();  // <========== (OpenSSL gets initialized here.)
+			OTCrypto::Set(m_pCrypto);
+			OTCrypto::It();  // Init() is now called by the constructor.
             
         }
         // ****************************************
@@ -809,7 +810,7 @@ int main(int argc, char* argv[])
             // We clean these up in reverse order from the Init function, which just seems
             // like the best default, in absence of any brighter ideas.
             //
-            OTCrypto::It()->Cleanup();  // <======= (OpenSSL gets cleaned up here.)
+            //OTCrypto::It()->Cleanup();  // <======= (OpenSSL gets cleaned up here.)
 
             // -------------------------
             // (This is at the bottom, since we do the cleanup in the 
