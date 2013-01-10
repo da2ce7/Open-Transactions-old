@@ -3,14 +3,23 @@
 :: files for connecting OT to other langurages.
 ECHO.
 
-ECHO Checking if ..\..\swigwin-2.0.8\swig.exe exist: 
-IF NOT EXIST "..\..\swigwin-2.0.8\swig.exe" (
-	ECHO cannot find swigwin-2.0.8...
+set START_DIR="%cd%"
+
+cd /D %~dp0
+
+Set SWIG_DIR=swigwin-2.0.9
+
+set SWIG_PATH=..\..\%SWIG_DIR%\swig.exe
+
+
+ECHO Checking if %SWIG_PATH% exist: 
+IF NOT EXIST %SWIG_PATH% (
+	ECHO cannot find %SWIG_DIR%...
 	GOTO END
 )
 
 ECHO.
-ECHO swigwin-2.0.8 exits! Good :)
+ECHO swigwin-2.0.9 exits! Good :)
 ECHO.
 ECHO.
 
@@ -29,13 +38,13 @@ IF EXIST otapi\OTAPI_wrap.h        DEL                              otapi\OTAPI_
 
 
 IF NOT %%x == java (
-	ECHO ..\..\swigwin-2.0.8\swig.exe -c++ -%%x -outdir glue\%%x otapi\OTAPI.i
-	..\..\swigwin-2.0.8\swig.exe -c++ -%%x -outdir glue\%%x otapi\OTAPI.i
+	ECHO %SWIG_PATH% -c++ -%%x -outdir glue\%%x otapi\OTAPI.i
+	%SWIG_PATH% -c++ -%%x -outdir glue\%%x otapi\OTAPI.i
 )
 
 IF %%x == java (
-	ECHO ..\..\swigwin-2.0.8\swig.exe -c++ -%%x -package org.opentransactions.jni.core -outdir glue\%%x otapi\otapi.i
-	 ..\..\swigwin-2.0.8\swig.exe -c++ -%%x -package org.opentransactions.jni.core -outdir glue\%%x otapi\otapi.i
+	ECHO %SWIG_PATH% -c++ -%%x -package org.opentransactions.jni.core -outdir glue\%%x otapi\otapi.i
+	 %SWIG_PATH% -c++ -%%x -package org.opentransactions.jni.core -outdir glue\%%x otapi\otapi.i
 )
 
 
@@ -57,3 +66,4 @@ ECHO.
 ECHO Done!
 ECHO.
 :END
+cd /D %START_DIR%
